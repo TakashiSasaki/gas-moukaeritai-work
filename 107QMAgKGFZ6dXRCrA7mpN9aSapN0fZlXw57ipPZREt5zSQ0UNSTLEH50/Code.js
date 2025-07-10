@@ -1,53 +1,68 @@
 /**
- * 最新のメールからパッケージデータを取得するコア機能。
+ * 複数のメールからパッケージデータを集約し、モデル名ごとにマージして返す。
  * @param {string} email - 検索対象のユーザーのメールアドレス
- * @return {Object} 抽出結果。{modelName, androidId, packageList}の形式。
+ * @return {Array<Object>} デバイス情報の配列。例: [{modelName, androidId, packageList}, ...]
  */
 function getLatestPackageData(email) {
-  // 引数で受け取ったメールアドレスを使って、動的に検索クエリを生成
   const searchQuery = `to:${email} from:${email} subject:'Android package list'`;
-  
+  const aggregatedData = {}; // { "モデル名": { androidId: "...", packages: Set(...) } }
+
   try {
-    const threads = GmailApp.search(searchQuery, 0, 1);
+    // 1. 最大で5件のスレッドを取得
+    const threads = GmailApp.search(searchQuery, 0, 5);
 
-    if (threads.length === 0) {
-      return {
-        modelName: 'データなし',
-        androidId: `対象のメールが見つかりませんでした。(from: ${email})`,
-        packageList: []
-      };
-    }
+    // 2. 全てのスレッドとメッセージをループ
+    threads.forEach(thread => {
+      const messages = thread.getMessages();
+      messages.forEach(message => {
+        try {
+          // 3. JSONデコードを試みる
+          const body = message.getPlainBody();
+          const parsedJson = JSON.parse(body);
+          
+          const [modelName, androidId, packageList] = parsedJson;
 
-    const targetThread = threads[0];
-    const latestMessage = targetThread.getMessages()[targetThread.getMessageCount() - 1];
-    const body = latestMessage.getPlainBody();
-    
-    try {
-      const parsedJson = JSON.parse(body);
+          // 必須データ（モデル名とパッケージリスト）が存在することを確認
+          if (modelName && Array.isArray(packageList)) {
+            // 4. モデル名をキーにデータを集約（マージ）
+            if (!aggregatedData[modelName]) {
+              // 初めて見るモデル名の場合、新しいエントリを作成
+              aggregatedData[modelName] = {
+                androidId: androidId, // 最初に取得したIDを保持
+                packages: new Set(packageList)
+              };
+            } else {
+              // 既存のモデル名の場合、パッケージリストをマージ（Setが自動で重複を除去）
+              packageList.forEach(pkg => aggregatedData[modelName].packages.add(pkg));
+            }
+            // 処理したメールは既読にする
+            message.markRead();
+          }
+        } catch (e) {
+          // 5. JSONのデコードに失敗した場合は、そのメールを無視する
+          // Logger.log(`Skipping a message due to parse error: ${e.message}`);
+        }
+      });
+    });
+
+    // 6. 集約したデータを最終的な戻り値の形式（オブジェクトの配列）に変換
+    const results = Object.keys(aggregatedData).map(modelName => {
+      const deviceData = aggregatedData[modelName];
+      // Setを配列に変換し、アルファベット順にソート
+      const sortedPackages = Array.from(deviceData.packages).sort();
       
-      latestMessage.markRead();
-      
       return {
-        modelName: parsedJson[0] || '不明なモデル',
-        androidId: parsedJson[1] || '不明なID',
-        packageList: parsedJson[2] || []
+        modelName: modelName,
+        androidId: deviceData.androidId,
+        packageList: sortedPackages
       };
+    });
 
-    } catch (jsonError) {
-      Logger.log(`JSON Parse Error: ${jsonError.message}`);
-      return {
-        modelName: 'データエラー',
-        androidId: 'メール本文のJSON形式が正しくありません。',
-        packageList: []
-      };
-    }
+    return results;
 
   } catch (gasError) {
     Logger.log(`GAS Execution Error: ${gasError.message}`);
-    return {
-      modelName: 'スクリプトエラー',
-      androidId: gasError.message,
-      packageList: []
-    };
+    // エラーが発生した場合は空の配列を返す
+    return [];
   }
 }

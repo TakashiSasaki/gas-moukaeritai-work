@@ -4,28 +4,20 @@
  * @return {HtmlOutput} 生成されたHTMLページ
  */
 function doGet(e) {
-  // セッションから、スクリプトを実行している有効なユーザーのメールアドレスを取得
   const userEmail = Session.getActiveUser().getEmail();
-  
-  // テンプレートを準備
   const html = HtmlService.createTemplateFromFile('index');
 
-  // メールアドレスが取得できなかった場合
   if (!userEmail) {
-    html.modelName = '認証エラー';
-    html.androidId = 'ユーザーのメールアドレスを取得できませんでした。';
-    html.packageList = [];
+    html.deviceData = []; // データがない場合は空の配列を渡す
+    html.userEmail = 'Not Authenticated';
   } else {
-    // 取得したメールアドレスを引数としてコア機能を呼び出す
-    const result = getLatestPackageData(userEmail);
-    
-    // 取得結果に応じてテンプレートに渡すデータを設定
-    html.modelName = result.modelName;
-    html.androidId = result.androidId;
-    html.packageList = result.packageList;
+    // 複数のデバイス情報を含む配列が返ってくる
+    const deviceDataArray = getLatestPackageData(userEmail);
+    // 配列全体をテンプレートに渡す
+    html.deviceData = deviceDataArray;
+    html.userEmail = userEmail;
   }
 
-  // 評価されたHTMLをWebページとして返す
   return html.evaluate()
              .setTitle('Android Package List Viewer')
              .addMetaTag('viewport', 'width=device-width, initial-scale=1');
