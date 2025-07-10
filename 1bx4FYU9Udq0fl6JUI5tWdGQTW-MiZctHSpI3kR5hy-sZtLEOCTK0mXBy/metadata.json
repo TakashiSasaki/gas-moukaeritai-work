@@ -1,0 +1,24 @@
+{
+  "name": "Pocket to Sheets Addon",
+  "id": "1bx4FYU9Udq0fl6JUI5tWdGQTW-MiZctHSpI3kR5hy-sZtLEOCTK0mXBy",
+  "url": "https://script.google.com/d/1bx4FYU9Udq0fl6JUI5tWdGQTW-MiZctHSpI3kR5hy-sZtLEOCTK0mXBy/edit?usp=drivesdk",
+  "lastUpdated": "2023-08-09T01:41:54.462Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbw8d3L0y7zKcmXvm3iqXeNgFjF1YptRJ-IGhtyRndY",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbw-F2yIiWkJ3FVmTD6eA-cFisv16hkOA6_4rYAxSNgBfspffpAbN6ozH8bXZuCCdOv2",
+      "target": "1",
+      "description": ""
+    },
+    {
+      "id": "AKfycbzYzJtSUVwHc6c9tTEkxOhB_ho8JmUJRSiHetr_p3PrOAmFBquBB7Rp9U06TNEP6v-6",
+      "target": "3",
+      "description": "Web app"
+    }
+  ]
+}

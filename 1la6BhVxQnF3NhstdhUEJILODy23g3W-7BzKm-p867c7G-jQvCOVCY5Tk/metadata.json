@@ -1,0 +1,14 @@
+{
+  "name": "Base32",
+  "id": "1la6BhVxQnF3NhstdhUEJILODy23g3W-7BzKm-p867c7G-jQvCOVCY5Tk",
+  "url": "https://script.google.com/d/1la6BhVxQnF3NhstdhUEJILODy23g3W-7BzKm-p867c7G-jQvCOVCY5Tk/edit?usp=drivesdk",
+  "lastUpdated": "2024-04-09T17:33:50.091Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbwcHHESXTxFm9BItn2auCKespVEyDm-q71Wzz1I-7F1",
+      "target": "HEAD",
+      "description": ""
+    }
+  ]
+}

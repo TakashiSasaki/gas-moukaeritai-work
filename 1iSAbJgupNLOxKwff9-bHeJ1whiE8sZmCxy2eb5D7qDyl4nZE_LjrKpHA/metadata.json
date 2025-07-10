@@ -1,0 +1,19 @@
+{
+  "name": "ArecXのスター表示に関するテスト",
+  "id": "1iSAbJgupNLOxKwff9-bHeJ1whiE8sZmCxy2eb5D7qDyl4nZE_LjrKpHA",
+  "url": "https://script.google.com/d/1iSAbJgupNLOxKwff9-bHeJ1whiE8sZmCxy2eb5D7qDyl4nZE_LjrKpHA/edit?usp=drivesdk",
+  "lastUpdated": "2025-01-13T17:35:23.531Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbw4NDrkymMtj1_jF5tT5emKpm2Si5pEJZGOOm69zNIW",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbwleNQ2aLMg4bRGhiSESkDOxbLHCa0OqaheVI08zsl5Ue0kwMaQ",
+      "target": "1",
+      "description": "web app meta-version"
+    }
+  ]
+}

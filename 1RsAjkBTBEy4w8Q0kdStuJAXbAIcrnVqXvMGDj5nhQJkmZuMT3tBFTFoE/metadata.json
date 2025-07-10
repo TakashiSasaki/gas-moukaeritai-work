@@ -1,0 +1,19 @@
+{
+  "name": "HelloJwt",
+  "id": "1RsAjkBTBEy4w8Q0kdStuJAXbAIcrnVqXvMGDj5nhQJkmZuMT3tBFTFoE",
+  "url": "https://script.google.com/d/1RsAjkBTBEy4w8Q0kdStuJAXbAIcrnVqXvMGDj5nhQJkmZuMT3tBFTFoE/edit?usp=drivesdk",
+  "lastUpdated": "2025-01-21T19:05:31.962Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbzcE3giVJRdG8U5CpuYfX34rnBYSWHiQEj1A7uRjycU",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbwYYTltOaKzGwc9mqNK-6Pd8j4yMb5TS96h0i2mhh1V85fULffp",
+      "target": "1",
+      "description": "web app meta-version"
+    }
+  ]
+}

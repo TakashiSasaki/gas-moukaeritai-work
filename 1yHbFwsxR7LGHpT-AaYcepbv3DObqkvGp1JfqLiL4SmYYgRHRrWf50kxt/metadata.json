@@ -1,0 +1,19 @@
+{
+  "name": "SheetHelper",
+  "id": "1yHbFwsxR7LGHpT-AaYcepbv3DObqkvGp1JfqLiL4SmYYgRHRrWf50kxt",
+  "url": "https://script.google.com/d/1yHbFwsxR7LGHpT-AaYcepbv3DObqkvGp1JfqLiL4SmYYgRHRrWf50kxt/edit?usp=drivesdk",
+  "lastUpdated": "2024-10-01T04:31:29.806Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbzOM5BSnD3miEgibCmGryc4eZGOi9lYO0GCxXAzVxo",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbxP92ED8dGNbmjdAquUfbDo9f2UYR6AVuI8ve_r2k7h4djLfYK_sxy0WIS2wlREBeeX",
+      "target": "1",
+      "description": ""
+    }
+  ]
+}

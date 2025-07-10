@@ -1,0 +1,19 @@
+{
+  "name": "WebClipboard",
+  "id": "1glSqRTMOxnhV3fGvaiuoJRMW0EM1bHIDurZbjph6lmp8bZYKOcP5s9WP",
+  "url": "https://script.google.com/d/1glSqRTMOxnhV3fGvaiuoJRMW0EM1bHIDurZbjph6lmp8bZYKOcP5s9WP/edit?usp=drivesdk",
+  "lastUpdated": "2023-06-06T03:07:05.002Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbwHP-tWzpjYee9Eh9wzHaTx37kURn50HBH8WBJSWJuW",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycby6Xt2wSr-UyZGB_N4Gyhww4tXrjUUUNM1lXPYSHekOLnhD9leOXdlp1EsNxM9GcUlYKg",
+      "target": "1",
+      "description": ""
+    }
+  ]
+}

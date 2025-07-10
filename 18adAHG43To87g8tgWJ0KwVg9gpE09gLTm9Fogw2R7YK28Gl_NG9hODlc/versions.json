@@ -1,0 +1,18 @@
+[
+  {
+    "version": 1,
+    "description": "release v1"
+  },
+  {
+    "version": 2,
+    "description": "release v2"
+  },
+  {
+    "version": 3,
+    "description": "release v3"
+  },
+  {
+    "version": 4,
+    "description": "release v4"
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "name": "Addon Helper",
+  "id": "1ryBTdV-IJH57QxJefgX334JWuJ7KHLjpT43v45VAqwAmFSKqkXkMFnAY",
+  "url": "https://script.google.com/d/1ryBTdV-IJH57QxJefgX334JWuJ7KHLjpT43v45VAqwAmFSKqkXkMFnAY/edit?usp=drivesdk",
+  "lastUpdated": "2021-02-06T05:20:17.969Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbzZXi5i10tVr_DSyYC-TvOOhHUGu5G16qBn33n-57g",
+      "target": "HEAD",
+      "description": ""
+    }
+  ]
+}

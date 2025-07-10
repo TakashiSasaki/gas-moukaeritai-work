@@ -1,0 +1,19 @@
+{
+  "name": "GasOAuthLibrary",
+  "id": "191-QOfGkDNe9otT_2cJxL1Afh04ulD8ArB5JnPkM7yddJ2-OiUTvvtVJ",
+  "url": "https://script.google.com/d/191-QOfGkDNe9otT_2cJxL1Afh04ulD8ArB5JnPkM7yddJ2-OiUTvvtVJ/edit?usp=drivesdk",
+  "lastUpdated": "2025-01-13T18:43:29.583Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbx0Oggfb8v4_2wRERB5KIOXvDb0pQr0Zno_lcFI8VaE",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbxv8IbZj04X0f-P7vY2S8gfLyBsCTmy9eMyBcoUEHwwbyzi8IFY",
+      "target": "29",
+      "description": "web app meta-version"
+    }
+  ]
+}

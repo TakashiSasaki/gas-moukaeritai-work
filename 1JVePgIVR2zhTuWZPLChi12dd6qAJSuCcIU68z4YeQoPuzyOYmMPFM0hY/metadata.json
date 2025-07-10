@@ -1,0 +1,19 @@
+{
+  "name": "Github Repository Summary",
+  "id": "1JVePgIVR2zhTuWZPLChi12dd6qAJSuCcIU68z4YeQoPuzyOYmMPFM0hY",
+  "url": "https://script.google.com/d/1JVePgIVR2zhTuWZPLChi12dd6qAJSuCcIU68z4YeQoPuzyOYmMPFM0hY/edit?usp=drivesdk",
+  "lastUpdated": "2018-01-01T10:27:33.746Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbynkdJ6-Vs7nv5zInNGOe-gFU3T2JHgAzoIg8XPt9cI",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbwHjMPqB1FrhaEgbXUSolRteEISWTzcqhtHe02hKhb88fFqRUiB",
+      "target": "1",
+      "description": "web app meta-version"
+    }
+  ]
+}

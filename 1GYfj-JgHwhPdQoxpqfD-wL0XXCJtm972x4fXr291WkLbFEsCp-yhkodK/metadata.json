@@ -1,0 +1,14 @@
+{
+  "name": "StringEx",
+  "id": "1GYfj-JgHwhPdQoxpqfD-wL0XXCJtm972x4fXr291WkLbFEsCp-yhkodK",
+  "url": "https://script.google.com/d/1GYfj-JgHwhPdQoxpqfD-wL0XXCJtm972x4fXr291WkLbFEsCp-yhkodK/edit?usp=drivesdk",
+  "lastUpdated": "2023-05-08T20:48:57.657Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycby18sjoSVF5F0l-V05w0Z4-G8v2QhTslcGp9NGW3CY",
+      "target": "HEAD",
+      "description": ""
+    }
+  ]
+}

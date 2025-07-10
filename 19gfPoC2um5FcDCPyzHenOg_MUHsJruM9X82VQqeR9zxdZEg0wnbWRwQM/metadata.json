@@ -1,0 +1,14 @@
+{
+  "name": "Gmail Search Sheets",
+  "id": "19gfPoC2um5FcDCPyzHenOg_MUHsJruM9X82VQqeR9zxdZEg0wnbWRwQM",
+  "url": "https://script.google.com/d/19gfPoC2um5FcDCPyzHenOg_MUHsJruM9X82VQqeR9zxdZEg0wnbWRwQM/edit?usp=drivesdk",
+  "lastUpdated": "2023-05-02T20:50:33.501Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbyc2xL-4FaC2RXd5J_jM2bJuEQuPdUgOVifnVjrMWk8",
+      "target": "HEAD",
+      "description": ""
+    }
+  ]
+}

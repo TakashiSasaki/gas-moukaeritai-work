@@ -1,0 +1,19 @@
+{
+  "name": "Gmail Label Manimulator",
+  "id": "1ZKdRjD7_vTfM1WdztdpTZATzOwvO8cWg5sZcDBgfdHAjny_DXH2sK3Zk",
+  "url": "https://script.google.com/d/1ZKdRjD7_vTfM1WdztdpTZATzOwvO8cWg5sZcDBgfdHAjny_DXH2sK3Zk/edit?usp=drivesdk",
+  "lastUpdated": "2018-04-26T18:38:07.347Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbyU9YZGhVoCpTKpYJIS2l6UOhGpiSS6qbkKflJdRC0",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbxHdjFvKCwbOxC2eMLoqA1EvHIzPdaeLxqQDx1xuGlqTqTGSQg",
+      "target": "1",
+      "description": "web app meta-version"
+    }
+  ]
+}

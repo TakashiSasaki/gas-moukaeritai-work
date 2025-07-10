@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap">
+  <style>
+    :root {
+      --primary-color: #4285f4;
+      --primary-color-dark: #3367d6;
+      --text-color: #333;
+      --background-color: #f5f5f5;
+      --container-bg: #fff;
+      --border-color: #ccc;
+      --border-light-color: #eee;
+      --button-secondary-bg: #f1f3f4;
+      --button-secondary-hover-bg: #e8eaed;
+      --text-muted: #5f6368;
+      --error-color: #d93025;
+      --success-color: #1e8e3e;
+    }
+    body { font-family: 'Roboto', sans-serif; background-color: var(--background-color); color: var(--text-color); margin: 0; padding: 20px; }
+    .container { width: 100%; max-width: 900px; margin: 0 auto; background: var(--container-bg); padding: 25px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    h1, h2 { border-bottom: 2px solid var(--border-light-color); padding-bottom: 10px; margin-top: 0; }
+    h1 { color: var(--primary-color); }
+    h2 { font-size: 1.2em; color: var(--text-color); margin-top: 30px; }
+    .drop-zone { margin-top: 20px; border: 2px dashed var(--border-color); border-radius: 8px; padding: 30px; text-align: center; color: var(--text-muted); transition: background-color 0.2s, border-color 0.2s; }
+    .drop-zone.drag-over { background-color: #e8f0fe; border-color: var(--primary-color); border-style: solid; }
+    #imageFile { display: none; }
+    #file-list-container { margin-top: 15px; max-height: 150px; overflow-y: auto; border: 1px solid var(--border-light-color); border-radius: 4px; padding: 5px; background-color: #fafafa;}
+    #file-list li { list-style-type: none; padding: 4px 8px; font-size: 0.9em; color: var(--text-muted); border-bottom: 1px solid #eee; }
+    #file-list li:last-child { border-bottom: none; }
+    .input-section { margin-top: 20px; }
+    textarea#textInput { width: 100%; min-height: 150px; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; font-family: 'monospace', 'Courier New'; font-size: 14px; box-sizing: border-box; margin-bottom: 10px; }
+    .button-group { display: flex; align-items: center; gap: 15px; margin-top: 20px; }
+    button, a.button-like { border: none; padding: 12px 20px; font-size: 16px; border-radius: 4px; cursor: pointer; transition: background-color 0.3s, opacity 0.3s; text-decoration: none; display: inline-flex; justify-content: center; align-items: center; }
+    button.primary { background-color: var(--primary-color); color: white; }
+    button.primary:hover { background-color: var(--primary-color-dark); }
+    button.secondary, a.button-like.secondary { background-color: var(--button-secondary-bg); color: var(--text-muted); }
+    button.secondary:hover, a.button-like.secondary:hover { background-color: var(--button-secondary-hover-bg); }
+    button:disabled { background-color: #9e9e9e; color: white; cursor: not-allowed; opacity: 0.7; }
+    #status { margin-top: 20px; min-height: 24px; transition: opacity 0.3s ease-in-out; }
+    .status-main { font-weight: bold; }
+    .status-success { color: var(--success-color); }
+    .summary { font-size: 0.9em; color: var(--text-muted); margin-top: 8px; font-weight: normal; }
+    .spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 10px; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    #result-container { margin-top: 20px; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 12px; border-bottom: 1px solid #ddd; word-break: break-word; }
+    th { background-color: #f2f2f2; }
+    tr:hover { background-color: #f9f9f9; }
+    .error { color: var(--error-color); font-weight: bold; }
+    .export-controls-container { margin-top: 25px; padding-top: 15px; border-top: 1px solid var(--border-light-color); }
+    .copy-button { background-color: #e8f0fe; color: var(--primary-color-dark); border-color: #a9c5f5; }
+    .copy-button:hover { background-color: #d2e3fc; }
+    .hidden { display: none !important; opacity: 0; }
+    #pubcache-section { margin-top: 25px; padding: 20px; border: 1px solid var(--border-light-color); border-radius: 8px; background: #fafafa; }
+    .pubcache-grid { display: grid; grid-template-columns: 1fr auto; gap: 10px 15px; align-items: center; }
+    .pubcache-grid label { font-weight: 500; grid-column: 1 / -1; }
+    .pubcache-grid input, .pubcache-grid select, .pubcache-grid button, .pubcache-grid a.button-like {
+        width: 100%;
+        box-sizing: border-box;
+        font-size: 14px;
+        padding: 10px 12px;
+        height: 42px;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+    }
+    #pubcacheKey { font-family: 'monospace'; }
+    #pubcacheKey.is-valid { border-color: var(--success-color); }
+    #endpointUrlContainer { grid-column: 1 / -1; margin-top: 10px; display: flex; gap: 10px; }
+    #endpointUrlDisplay { flex-grow: 1; background-color: #eee; font-family: 'monospace'; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #copyCacheKeyButton { flex-shrink: 0; }
+    .full-width { grid-column: 1 / -1; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>DNS Record Extractor</h1>
+    
+    <h2>画像から抽出</h2>
+    <div id="dropZone" class="drop-zone">
+      <input type="file" id="imageFile" accept="image/png, image/jpeg, image/webp, text/plain, .zone, .txt" multiple>
+      <p>画像/テキストファイル(.txt, .zone)をここにドラッグ＆ドロップ</p>
+    </div>
+    <div id="file-list-container" class="hidden"> <ul id="file-list"></ul> </div>
+
+    <h2>テキストから抽出</h2>
+    <div class="input-section"> <textarea id="textInput" placeholder="ここにDNSレコードのテキストを貼り付け、または入力してください..."></textarea> </div>
+
+    <div class="button-group">
+      <button id="submitButton" class="primary">Extract from Files / Text</button>
+      <button id="clearButton" class="secondary">Clear All</button>
+    </div>
+
+    <div id="status" aria-live="polite"></div>
+    <div id="result-container"></div>
+    
+    <!-- PubCache Section -->
+    <div id="pubcache-section">
+        <h2>結果をキャッシュに保存・復元</h2>
+        <div class="pubcache-grid">
+            <label for="keyHistorySelect">キー履歴</label>
+            <select id="keyHistorySelect"></select>
+            <button id="generateKeyButton" class="secondary">新規キー生成</button>
+            
+            <label for="pubcacheKey">PubCacheキー</label>
+            <input type="text" id="pubcacheKey" placeholder="43文字以上のキーを入力・生成・または選択">
+            <button id="copyCacheKeyButton" class="secondary copy-button">コピー</button>
+            
+            <div class="button-group full-width" style="margin-top: 10px; gap: 15px;">
+                <button id="restoreFromKeyButton" class="secondary" style="width: 100%;">復元</button>
+                <button id="saveToCacheButton" class="primary" style="width: 100%;">結果を保存</button>
+            </div>
+
+            <div id="endpointUrlContainer" class="hidden">
+                <input type="text" id="endpointUrlDisplay" readonly>
+                <div class="button-group" style="margin-top: 0; gap: 5px;">
+                  <button id="copyEndpointButton" class="secondary copy-button" style="font-size: 14px; padding: 10px 12px; height: 42px;">コピー</button>
+                  <a id="openEndpointLink" class="secondary button-like hidden" style="font-size: 14px; padding: 10px 12px; height: 42px;" role="button" target="_blank" rel="noopener noreferrer">開く</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="export-controls" class="hidden export-controls-container">
+        <h2>結果をエクスポート</h2>
+        <div class="button-group" style="margin-top: 0;">
+            <button id="downloadCsvButton" class="export-button">Download CSV</button>
+            <button id="copyCsvButton" class="export-button copy-button">Copy CSV</button>
+            <button id="downloadJsonButton" class="export-button">Download JSON</button>
+            <button id="copyJsonButton" class="export-button copy-button">Copy JSON</button>
+        </div>
+    </div>
+  </div>
+
+<script>
+  let allRecords = [];
+  let debounceTimer = null;
+  const KEY_HISTORY_STORAGE_KEY = 'dnsExtractorKeyHistory';
+  const UIElements = {
+    submitButton: document.getElementById('submitButton'),
+    clearButton: document.getElementById('clearButton'),
+    imageFile: document.getElementById('imageFile'),
+    textInput: document.getElementById('textInput'),
+    statusDiv: document.getElementById('status'),
+    resultContainer: document.getElementById('result-container'),
+    dropZone: document.getElementById('dropZone'),
+    exportControls: document.getElementById('export-controls'),
+    copyCsvButton: document.getElementById('copyCsvButton'),
+    copyJsonButton: document.getElementById('copyJsonButton'),
+    downloadCsvButton: document.getElementById('downloadCsvButton'),
+    downloadJsonButton: document.getElementById('downloadJsonButton'),
+    fileListContainer: document.getElementById('file-list-container'),
+    fileList: document.getElementById('file-list'),
+    pubcacheSection: document.getElementById('pubcache-section'),
+    pubcacheKey: document.getElementById('pubcacheKey'),
+    copyCacheKeyButton: document.getElementById('copyCacheKeyButton'),
+    restoreFromKeyButton: document.getElementById('restoreFromKeyButton'),
+    generateKeyButton: document.getElementById('generateKeyButton'),
+    saveToCacheButton: document.getElementById('saveToCacheButton'),
+    keyHistorySelect: document.getElementById('keyHistorySelect'),
+    endpointUrlContainer: document.getElementById('endpointUrlContainer'),
+    endpointUrlDisplay: document.getElementById('endpointUrlDisplay'),
+    copyEndpointButton: document.getElementById('copyEndpointButton'),
+    openEndpointLink: document.getElementById('openEndpointLink'),
+  };
+
+  document.addEventListener('DOMContentLoaded', loadKeyHistory);
+  UIElements.submitButton.addEventListener('click', handleSubmitClick);
+  UIElements.clearButton.addEventListener('click', handleClearClick);
+  UIElements.imageFile.addEventListener('change', updateUIState);
+  UIElements.textInput.addEventListener('input', updateUIState);
+  UIElements.copyCsvButton.addEventListener('click', () => handleCopy('CSV'));
+  UIElements.copyJsonButton.addEventListener('click', () => handleCopy('JSON'));
+  UIElements.downloadCsvButton.addEventListener('click', () => handleDownload('CSV'));
+  UIElements.downloadJsonButton.addEventListener('click', () => handleDownload('JSON'));
+  document.addEventListener('paste', handlePaste);
+  ['dragenter','dragover','dragleave','drop'].forEach(e => { document.body.addEventListener(e, preventDefaults); UIElements.dropZone.addEventListener(e, preventDefaults); });
+  ['dragenter','dragover'].forEach(e => UIElements.dropZone.classList.add('drag-over'));
+  ['dragleave','drop'].forEach(e => UIElements.dropZone.classList.remove('drag-over'));
+  UIElements.dropZone.addEventListener('drop', handleDrop);
+  UIElements.generateKeyButton.addEventListener('click', handleGenerateKeyClick);
+  UIElements.pubcacheKey.addEventListener('input', updatePubCacheUI);
+  UIElements.keyHistorySelect.addEventListener('change', handleKeyHistoryChange);
+  UIElements.saveToCacheButton.addEventListener('click', handleSaveToCacheClick);
+  UIElements.restoreFromKeyButton.addEventListener('click', handleRestoreFromKeyClick);
+  UIElements.copyCacheKeyButton.addEventListener('click', () => copyToClipboard(UIElements.pubcacheKey.value, 'PubCache Key'));
+  UIElements.copyEndpointButton.addEventListener('click', () => copyToClipboard(UIElements.endpointUrlDisplay.value, 'Endpoint URL'));
+
+  function handleSubmitClick() {
+    const textContent = UIElements.textInput.value.trim();
+    const files = UIElements.imageFile.files;
+    if (files.length > 0) { processImageFiles(Array.from(files)); }
+    if (textContent) { processText(textContent); }
+  }
+
+  function handleClearClick() {
+    allRecords = []; UIElements.imageFile.value = ''; UIElements.textInput.value = ''; UIElements.pubcacheKey.value = '';
+    updateUIState(); setLoading(false); setStatus('<div class="status-main">Cleared.</div>', 3000);
+  }
+  
+  function handleDrop(e) {
+    const { imageFiles, textFiles } = categorizeFiles(e.dataTransfer.files);
+    if (imageFiles.length > 0) { const dt = new DataTransfer(); imageFiles.forEach(f => dt.items.add(f)); UIElements.imageFile.files = dt.files; }
+    const textReadPromise = textFiles.length > 0 ? readTextFiles(textFiles).then(content => { UIElements.textInput.value += content; }) : Promise.resolve();
+    textReadPromise.then(() => { updateUIState(); });
+  }
+
+  function handlePaste(e) {
+    const cd = e.clipboardData || window.clipboardData, text = cd.getData('text'), images = Array.from(cd.files).filter(f => f.type.startsWith('image/'));
+    if (text && document.activeElement !== UIElements.textInput) { UIElements.textInput.value += text; setStatus('Text pasted.', 3000); }
+    if(images.length > 0){ UIElements.imageFile.files = cd.files; }
+    updateUIState();
+  }
+  
+  function handleGenerateKeyClick() {
+    const arr = new Uint8Array(32); crypto.getRandomValues(arr);
+    const b64 = btoa(String.fromCharCode.apply(null, arr)), b64url = b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    UIElements.pubcacheKey.value = b64url; updatePubCacheUI();
+  }
+
+  function handleKeyHistoryChange() {
+    const key = UIElements.keyHistorySelect.value; if (key) { UIElements.pubcacheKey.value = key; updatePubCacheUI(); }
+  }
+
+  function handleSaveToCacheClick() {
+    const key = UIElements.pubcacheKey.value, value = JSON.stringify(allRecords);
+    if (!key || key.length < 43 || allRecords.length === 0) return;
+    setLoading(true, 'Saving to cache...');
+    google.script.run.withSuccessHandler(msg => { setLoading(false); setStatus(`<div class="status-main status-success">${escapeHtml(msg)}</div>`, 5000); addKeyToHistory(key); }).withFailureHandler(displayError).saveDataToCache(key, value);
+  }
+
+  function handleRestoreFromKeyClick() {
+    const key = UIElements.pubcacheKey.value;
+    if (!key || key.length < 43) {
+      setStatus('<div class="error">Please enter a valid PubCache key to restore.</div>', 4000);
+      return;
+    }
+    setLoading(true, 'Getting endpoint URL...');
+    google.script.run
+      .withSuccessHandler(url => {
+        if (url) {
+          setLoading(true, 'Fetching data from endpoint...');
+          google.script.run
+            .withSuccessHandler(restoreResults)
+            .withFailureHandler(displayError)
+            .fetchFromEndpoint(url);
+        } else {
+          displayError({ message: 'Could not resolve a valid endpoint for the given key.' });
+        }
+      })
+      .withFailureHandler(displayError)
+      .getEndpointUrl(key);
+  }
+
+  function processImageFiles(fileList) {
+    setLoading(true, `Reading ${fileList.length} image(s)...`);
+    const readers = fileList.map(file => new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve({ base64: r.result, mimeType: file.type, name: file.name }); r.onerror = reject; r.readAsDataURL(file); }));
+    Promise.all(readers).then(files => { setLoading(true, `Processing ${files.length} image(s)...`); google.script.run.withSuccessHandler(displayResults).withFailureHandler(displayError).extractDnsRecordsFromImages(files.map(f => f.base64), files.map(f => f.mimeType), files.map(f => f.name)); }).catch(err => displayError({ message: 'Failed to read image files.' }));
+  }
+
+  function processText(textContent) {
+    setLoading(true, 'Processing text...'); google.script.run.withSuccessHandler(displayResults).withFailureHandler(displayError).extractDnsRecordsFromText(textContent);
+  }
+
+  function restoreResults(jsonString) {
+    setLoading(false);
+    try {
+        const restoredRecs = JSON.parse(jsonString);
+        if (!Array.isArray(restoredRecs)) {
+            throw new Error('Fetched data is not a valid record array.');
+        }
+        allRecords = restoredRecs; // Replace current records
+        setStatus(`<div class="status-main status-success">Successfully restored ${allRecords.length} records.</div>`, 5000);
+        updateUIState();
+    } catch (e) {
+        displayError({ message: `Failed to restore records. Invalid JSON format. ${e.message}` });
+    }
+  }
+
+  function displayResults(jsonString) {
+    setLoading(false);
+    try {
+        const newRecs = JSON.parse(jsonString); if (!Array.isArray(newRecs)) throw new Error('Invalid data.');
+        const existing = new Set(allRecords.map(r => `${r.type}|${r.hostname}|${r.value}`)); let addedCount = 0;
+        newRecs.forEach(r => { const key = `${r.type}|${r.hostname}|${r.value}`; if (!existing.has(key)) { allRecords.push(r); existing.add(key); addedCount++; } });
+        if (addedCount > 0) {
+            const counts = allRecords.reduce((acc, r) => ({...acc, [r.type]: (acc[r.type] || 0) + 1}), {});
+            setStatus(`<div class="status-main">${addedCount} new record(s) added. Total: ${allRecords.length}.</div><div class="summary">${Object.keys(counts).sort().map(t => `<b>${t}</b>: ${counts[t]}`).join(' | ')}</div>`);
+        } else { setStatus('<div class="status-main">No new unique records found.</div>'); }
+        updateUIState();
+    } catch (e) { displayError({ message: `Failed to parse server response: ${e.message}` }); }
+  }
+  function displayError(error) { setLoading(false); setStatus(`<div class="error">Error: ${escapeHtml(error.message)}</div>`); }
+
+  function updateUIState() {
+      const files = UIElements.imageFile.files, hasText = UIElements.textInput.value.trim() !== '';
+      if (files.length > 0) { UIElements.fileList.innerHTML = Array.from(files).map(f => `<li>${escapeHtml(f.name)}</li>`).join(''); UIElements.fileListContainer.classList.remove('hidden'); } else { UIElements.fileListContainer.classList.add('hidden'); }
+      UIElements.submitButton.disabled = files.length === 0 && !hasText;
+      if (allRecords.length > 0) {
+          createTable(allRecords);
+          UIElements.exportControls.classList.remove('hidden');
+      } else {
+          UIElements.resultContainer.innerHTML = '';
+          UIElements.exportControls.classList.add('hidden');
+      }
+      updatePubCacheUI();
+  }
+
+  function updatePubCacheUI() {
+    const key = UIElements.pubcacheKey.value;
+    const isValidKey = key.length >= 43;
+    UIElements.pubcacheKey.classList.toggle('is-valid', isValidKey);
+    UIElements.copyCacheKeyButton.disabled = key.length === 0;
+    UIElements.restoreFromKeyButton.disabled = !isValidKey;
+    UIElements.saveToCacheButton.disabled = !isValidKey || allRecords.length === 0;
+    clearTimeout(debounceTimer);
+    UIElements.endpointUrlContainer.classList.add('hidden');
+    UIElements.openEndpointLink.classList.add('hidden');
+    if (isValidKey) {
+        debounceTimer = setTimeout(() => {
+            UIElements.endpointUrlDisplay.value = 'Generating URL...';
+            UIElements.endpointUrlContainer.classList.remove('hidden');
+            google.script.run.withSuccessHandler(url => {
+                UIElements.endpointUrlDisplay.value = url || 'Error: Invalid key for endpoint.';
+                if(url) { UIElements.openEndpointLink.href = url; UIElements.openEndpointLink.classList.remove('hidden'); }
+            }).withFailureHandler(err => { UIElements.endpointUrlDisplay.value = 'Error fetching URL.'; }).getEndpointUrl(key);
+        }, 500);
+    }
+  }
+
+  function createTable(records) {
+    const headers=['type','hostname','value','ttl','priority'], order=['SOA','NS','A','AAAA','CNAME','MX','TXT','SRV','DS','CAA'];
+    records.sort((a,b)=>{ const ta=order.indexOf(a.type.toUpperCase()),tb=order.indexOf(b.type.toUpperCase()); if(ta!==-1||tb!==-1){if(ta===-1)return 1;if(tb===-1)return -1;if(ta!==tb)return ta-tb;}return a.hostname.localeCompare(b.hostname)||a.type.localeCompare(b.type); });
+    let html=`<table><thead><tr>${headers.map(h=>`<th>${h.toUpperCase()}</th>`).join('')}</tr></thead><tbody>`;
+    records.forEach(rec=>{html+=`<tr>${headers.map(h=>`<td>${escapeHtml(String(rec[h]!=null?rec[h]:'–'))}</td>`).join('')}</tr>`;});
+    UIElements.resultContainer.innerHTML=html+'</tbody></table>';
+  }
+
+  function loadKeyHistory() {
+    const keys=JSON.parse(localStorage.getItem(KEY_HISTORY_STORAGE_KEY))||[];
+    UIElements.keyHistorySelect.innerHTML='<option value="">履歴から選択...</option>'+keys.map(key=>`<option value="${escapeHtml(key)}">${escapeHtml(key)}</option>`).join('');
+  }
+
+  function addKeyToHistory(key) {
+    let keys=JSON.parse(localStorage.getItem(KEY_HISTORY_STORAGE_KEY))||[];
+    keys=keys.filter(k=>k!==key); keys.unshift(key); localStorage.setItem(KEY_HISTORY_STORAGE_KEY,JSON.stringify(keys.slice(0,10))); loadKeyHistory();
+  }
+
+  function preventDefaults(e){e.preventDefault();e.stopPropagation();}
+  function escapeHtml(str){const p=document.createElement('p');p.appendChild(document.createTextNode(str));return p.innerHTML;}
+  function categorizeFiles(fileList){const img=[],txt=[],ext=['.txt','.zone'];Array.from(fileList).forEach(f=>{if(f.type.startsWith('image/'))img.push(f);else if(f.type==='text/plain'||ext.some(e=>f.name.endsWith(e)))txt.push(f);});return {imageFiles:img,textFiles:txt};}
+  function readTextFiles(files){return Promise.all(files.map(f=>new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsText(f);}))).then(c=>c.join('\n\n'));}
+  function setLoading(isLoading, message = '') { UIElements.submitButton.disabled = isLoading; UIElements.clearButton.disabled = isLoading; if (isLoading) setStatus(`<div class="spinner"></div> ${escapeHtml(message)}`); }
+  function setStatus(html, clearAfterMs = 0) { UIElements.statusDiv.innerHTML = html; if (clearAfterMs > 0) setTimeout(() => { if (UIElements.statusDiv.innerHTML === html) UIElements.statusDiv.innerHTML = ''; }, clearAfterMs); }
+  function handleDownload(format){if(!allRecords.length)return;const isCsv=format==='CSV',content=isCsv?generateCsvContent():generateJsonContent(),mime=isCsv?'text/csv;charset=utf-8;':'application/json',name=isCsv?'dns_records.csv':'dns_records.json',blob=new Blob([(isCsv?'\uFEFF':'')+content],{type:mime});triggerDownload(blob,name);}
+  function handleCopy(format){if(!allRecords.length)return;const isCsv=format==='CSV',content=isCsv?generateCsvContent():generateJsonContent();copyToClipboard(content,format);}
+  function generateJsonContent(){return JSON.stringify(allRecords,null,2);}
+  function generateCsvContent(){const h=['type','hostname','value','ttl','priority'];let c=h.join(',')+'\n';allRecords.forEach(r=>{const row=h.map(h=>{let cell=r[h]!=null?String(r[h]):'';if(cell.includes('"'))cell=`"${cell.replace(/"/g,'""')}"`;else if(cell.includes(','))cell=`"${cell}"`;return cell;}).join(',');c+=row+'\n';});return c;}
+  function triggerDownload(blob,fileName){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fileName;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(a.href);}
+  function copyToClipboard(text,formatName){const ta=document.createElement("textarea");ta.value=text;ta.style.position="fixed";ta.style.left="-9999px";document.body.appendChild(ta);ta.select();try{if(document.execCommand('copy'))setStatus(`<div class="status-main status-success">${escapeHtml(formatName)} data copied.</div>`,3000);else throw new Error();}catch(err){setStatus(`<div class="error">Failed to copy ${escapeHtml(formatName)}.</div>`,5000);}finally{document.body.removeChild(ta);}}
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "name": "Google Takeout File Browser",
+  "id": "1z_jBz0uoeT8VfbsuBhbw9op6GBZSolw89bFbEx3J4HDmCTOCfhsfwOoN",
+  "url": "https://script.google.com/d/1z_jBz0uoeT8VfbsuBhbw9op6GBZSolw89bFbEx3J4HDmCTOCfhsfwOoN/edit?usp=drivesdk",
+  "lastUpdated": "2022-10-11T12:45:34.441Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbxWPw4ikR91f1NyRKmmvZRVHrfR8NL2rUIRg47bV2g",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbxLVcYnVc4EqpKWBRk2A4uiA7IsxDTjsf7iCQpMPOjAgs2-pTyK_SCL_TM5cjclqz17",
+      "target": "2",
+      "description": "Google Takeout File Browser"
+    },
+    {
+      "id": "AKfycbz4boyB9cGDE9qUSK5nv3MYT5iOUZVlRNoUYp144s_m6Y7wRaYkPEf1CPRZbJ4abxR4",
+      "target": "1",
+      "description": "GCPでプロジェクトを作成し、スコープと認可ページを作成した"
+    }
+  ]
+}

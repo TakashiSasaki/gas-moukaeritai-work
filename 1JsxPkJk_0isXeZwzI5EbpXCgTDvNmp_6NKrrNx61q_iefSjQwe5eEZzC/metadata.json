@@ -1,0 +1,14 @@
+{
+  "name": "JsonTable",
+  "id": "1JsxPkJk_0isXeZwzI5EbpXCgTDvNmp_6NKrrNx61q_iefSjQwe5eEZzC",
+  "url": "https://script.google.com/d/1JsxPkJk_0isXeZwzI5EbpXCgTDvNmp_6NKrrNx61q_iefSjQwe5eEZzC/edit?usp=drivesdk",
+  "lastUpdated": "2019-09-10T02:44:51.648Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbzOVg_yg1ZshX78ofDX_is6UT5sBxA2PDA_5d6WKM0",
+      "target": "HEAD",
+      "description": ""
+    }
+  ]
+}

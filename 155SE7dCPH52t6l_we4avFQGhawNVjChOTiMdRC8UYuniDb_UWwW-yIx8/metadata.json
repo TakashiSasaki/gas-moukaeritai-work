@@ -1,0 +1,19 @@
+{
+  "name": "Markdown in Sheet addon",
+  "id": "155SE7dCPH52t6l_we4avFQGhawNVjChOTiMdRC8UYuniDb_UWwW-yIx8",
+  "url": "https://script.google.com/d/155SE7dCPH52t6l_we4avFQGhawNVjChOTiMdRC8UYuniDb_UWwW-yIx8/edit?usp=drivesdk",
+  "lastUpdated": "2025-01-24T18:19:53.560Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbx7jRVuS8qDFwALc2pfuxI8ZzIMjWAyEZU1WWDwWo3O",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbxVjczfHJ6xR7moBtgeMAmkQ8CI1LmvwpR7489iUlzB9JlscpPO",
+      "target": "1",
+      "description": "web app meta-version"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "(obsoleted) Html Template Library",
+  "id": "1XB8G6BUwfRJsR9KyHOaEX8F1D2k3hmP0tB5Zec6cKoXNwx4hA4turlAj",
+  "url": "https://script.google.com/d/1XB8G6BUwfRJsR9KyHOaEX8F1D2k3hmP0tB5Zec6cKoXNwx4hA4turlAj/edit?usp=drivesdk",
+  "lastUpdated": "2025-01-23T19:53:53.278Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbwtkIyaTSM3aNe0elFHW1-C_s2Ru2drUXPd0xBFBC8",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbzR9MuWARcNJG9mHUqd_qGjx3q-RiULlRGE4fa9rniz7H7tukg",
+      "target": "31",
+      "description": "web app meta-version"
+    }
+  ]
+}

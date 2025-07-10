@@ -1,0 +1,19 @@
+{
+  "name": "Google Colaboratory Cell Link",
+  "id": "1R6Wr7q2KhcEMl6aUGc4YtwcKyuDfPkX-duWxyA93qLVLnpvAFkx47N4r",
+  "url": "https://script.google.com/d/1R6Wr7q2KhcEMl6aUGc4YtwcKyuDfPkX-duWxyA93qLVLnpvAFkx47N4r/edit?usp=drivesdk",
+  "lastUpdated": "2023-12-01T11:29:22.789Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbyOjT0_ju2cGcfLTNGX6JEBW8DAnD9e31Tsdi-9IxU",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbwk_7NmrG1nPM3bBIxPbEsURHcqxBfLf0Gu_WHdJaNLouq3XuDbVvDRYoZnY0QRCmPk",
+      "target": "40",
+      "description": "Web app only"
+    }
+  ]
+}

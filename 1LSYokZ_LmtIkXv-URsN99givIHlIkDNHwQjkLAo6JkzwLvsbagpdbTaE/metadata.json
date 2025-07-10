@@ -1,0 +1,19 @@
+{
+  "name": "Spreadsheet Addon（すぷれ）",
+  "id": "1LSYokZ_LmtIkXv-URsN99givIHlIkDNHwQjkLAo6JkzwLvsbagpdbTaE",
+  "url": "https://script.google.com/d/1LSYokZ_LmtIkXv-URsN99givIHlIkDNHwQjkLAo6JkzwLvsbagpdbTaE/edit?usp=drivesdk",
+  "lastUpdated": "2025-01-22T18:32:42.929Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbwsy3-sNbx3Twj5sJd6ZUIo-kZ6KYAqEb842Kvkqdw",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbwuZ6LOWFTlx8Ra6L-JGOE8NBu8NwFTd6cGf023ZJIPx5o0zkQ",
+      "target": "32",
+      "description": "web app meta-version"
+    }
+  ]
+}

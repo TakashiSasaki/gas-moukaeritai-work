@@ -1,0 +1,19 @@
+{
+  "name": "感情分析",
+  "id": "1tEJHwlwUnrmb4488tbOkvhlBBfrAVHflvXT2WqXp_z8GGNgIi-Mv5VQ6",
+  "url": "https://script.google.com/d/1tEJHwlwUnrmb4488tbOkvhlBBfrAVHflvXT2WqXp_z8GGNgIi-Mv5VQ6/edit?usp=drivesdk",
+  "lastUpdated": "2023-06-08T04:36:51.310Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbya33Nunwrn_rnO6olls6IGlNrEgDPj3QoAO03nIuZQ",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbx9Oyusm3lzvRHOBYVypVIIKqFdohtjx4gHfL1Cz1gZ5RYzd5r68VXIpnpFPsrF21GLyA",
+      "target": "4",
+      "description": ""
+    }
+  ]
+}

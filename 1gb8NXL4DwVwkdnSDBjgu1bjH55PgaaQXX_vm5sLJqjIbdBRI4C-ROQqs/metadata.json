@@ -1,0 +1,24 @@
+{
+  "name": "Bookmark Spreadsheet",
+  "id": "1gb8NXL4DwVwkdnSDBjgu1bjH55PgaaQXX_vm5sLJqjIbdBRI4C-ROQqs",
+  "url": "https://script.google.com/d/1gb8NXL4DwVwkdnSDBjgu1bjH55PgaaQXX_vm5sLJqjIbdBRI4C-ROQqs/edit?usp=drivesdk",
+  "lastUpdated": "2025-06-20T00:24:23.023Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycby_xIfclBR_hh62wHREuBAPX9I6LdH0Kjujc58G_DI3",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbzG1T0CCGAZeRXgqjGnRvn6kf01CawumQ2CoOghPQPmPKMGyytN098yvC1Yd10I0kbAqA",
+      "target": "2",
+      "description": "公開用"
+    },
+    {
+      "id": "AKfycbzSsjc2zq4wx3LgfbYVTEMEInTvAzpQjmATklah0_gAsvfRtX2U7Hy1_OQqH4fQ9v9U",
+      "target": "1",
+      "description": "プレビュー用"
+    }
+  ]
+}

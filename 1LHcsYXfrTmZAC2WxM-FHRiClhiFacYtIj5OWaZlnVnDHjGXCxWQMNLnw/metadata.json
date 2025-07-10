@@ -1,0 +1,19 @@
+{
+  "name": "Mozilla PDF.js",
+  "id": "1LHcsYXfrTmZAC2WxM-FHRiClhiFacYtIj5OWaZlnVnDHjGXCxWQMNLnw",
+  "url": "https://script.google.com/d/1LHcsYXfrTmZAC2WxM-FHRiClhiFacYtIj5OWaZlnVnDHjGXCxWQMNLnw/edit?usp=drivesdk",
+  "lastUpdated": "2020-05-27T16:06:19.232Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbwvk9iyqrAM-nsANeqnDFZQmLno90n7NlpgJTZ3WX4e",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbwU7Hprc1Y2Xr-I2ofsHYmi_Zo94Nbe_2cSWFSTurafxNPosoFa",
+      "target": "2",
+      "description": "web app meta-version"
+    }
+  ]
+}

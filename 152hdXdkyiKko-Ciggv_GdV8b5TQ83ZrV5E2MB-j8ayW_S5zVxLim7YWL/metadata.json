@@ -1,0 +1,14 @@
+{
+  "name": "Snippets For Gmail",
+  "id": "152hdXdkyiKko-Ciggv_GdV8b5TQ83ZrV5E2MB-j8ayW_S5zVxLim7YWL",
+  "url": "https://script.google.com/d/152hdXdkyiKko-Ciggv_GdV8b5TQ83ZrV5E2MB-j8ayW_S5zVxLim7YWL/edit?usp=drivesdk",
+  "lastUpdated": "2021-06-19T15:30:04.849Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbx_kF6GsfXuhIBS9M-Psc2hL-a07Pn-ra4Z_A2jsRu4",
+      "target": "HEAD",
+      "description": ""
+    }
+  ]
+}

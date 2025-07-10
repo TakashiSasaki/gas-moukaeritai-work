@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>アプリケーション仕様書 - PubCache</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+            color: #343a40;
+        }
+        header {
+            background-color: #343a40;
+            color: white;
+            padding: 10px 20px;
+            margin-bottom: 20px;
+            text-align: right;
+        }
+        header a {
+            color: #ffffff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        header a:hover {
+            text-decoration: underline;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px 40px;
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.05);
+        }
+        h1, h2, h3 {
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+            margin-top: 40px;
+        }
+        h1 { font-size: 2em; text-align: center; border-bottom: none; }
+        h2 { font-size: 1.5em; }
+        h3 { font-size: 1.2em; border-bottom: 1px solid #e9ecef; }
+        code { background-color: #e9ecef; padding: 2px 5px; border-radius: 4px; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; }
+        pre { background-color: #343a40; color: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; }
+        pre code { background-color: transparent; padding: 0; border-radius: 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #dee2e6; padding: 12px; text-align: left; }
+        th { background-color: #f1f3f5; }
+        .note { background-color: #e7f5ff; border-left: 5px solid #1c7ed6; padding: 15px; margin: 20px 0; }
+        .warning { background-color: #fff9db; border-left: 5px solid #f08c00; padding: 15px; margin: 20px 0; }
+        a { color: #0056b3; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <header>
+        <nav>
+            <a href="<?!= baseUrl ?>">アプリケーションに戻る</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <h1>アプリケーション仕様書</h1>
+        <p style="text-align: center; color: #6c757d;">PubCache</p>
+
+        <h2>1. 概要</h2>
+        <p>
+            本アプリケーションは、Google Apps Scriptの<code>CacheService.getScriptCache()</code>を利用して、キーと値のペアを一時的に保存・取得するためのWebツールです。揮発性のデータを手軽に共有したり、アクセスしたりする目的で使用します。
+        </p>
+        <p>
+            アプリケーションは以下の3つの方法で利用できます。
+        </p>
+        <ul>
+            <li><strong>UIモード</strong>: Webブラウザを通じてキーと値のペアを対話的に管理します。</li>
+            <li><strong>APIモード</strong>: WebアプリのURLにキーをパラメータとして付与することで、対応する値を直接取得します。</li>
+            <li><strong>ライブラリモード</strong>: 他のGoogle Apps Scriptプロジェクトからライブラリとして参照し、関数を直接呼び出します。</li>
+        </ul>
+
+        <h2>2. 機能仕様</h2>
+        <h3>2.1. UIモード</h3>
+        <p>WebアプリのURLにパラメータを付けずにアクセスした場合に表示されるモードです。</p>
+        <h4>2.1.1. 画面構成要素</h4>
+        <table>
+            <thead>
+                <tr><th>要素名</th><th>説明</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>キー入力欄</td><td>値を保存・取得するためのキーを入力するテキストボックス。入力されたキーの文字列長が43文字以上になると、枠線が緑色に変わります。</td></tr>
+                <tr><td>キー生成ボタン</td><td><code>crypto.getRandomValues()</code>を用いて32バイトの乱数を生成し、それをBase64url形式にエンコードした文字列をキー入力欄に設定します。</td></tr>
+                <tr><td>キー履歴</td><td>過去に操作（保存・取得）したキーを最大10件まで表示するリストボックス。ブラウザの<code>localStorage</code>に保存されます。履歴からキーを選択すると、そのキーが入力欄に設定され、直ちに値の読み込みが実行されます。</td></tr>
+                <tr><td>値入力欄</td><td>保存したい文字列を入力するテキストエリア。</td></tr>
+                <tr><td>記憶ボタン</td><td>キー入力欄と値入力欄の内容をペアとしてキャッシュに保存します。</td></tr>
+                <tr><td>呼び出しボタン</td><td>キー入力欄のキーを元にキャッシュから値を読み出し、値入力欄に表示します。</td></tr>
+                <tr><td>API URL表示エリア</td><td>キー入力欄に有効なキーが入力されると、APIモードで値を呼び出すためのURLが自動的に生成・表示されます。このURLはクリッカブルであり、横のコピーボタンでクリップボードにコピーできます。</td></tr>
+            </tbody>
+        </table>
+        
+        <h3>2.2. APIモード</h3>
+        <p>WebアプリのURLに直接パラメータを付与してアクセスした場合に動作するモードです。</p>
+        <pre><code><?!= baseUrl ?>?{キー}</code></pre>
+        <h4>2.2.1. リクエスト仕様</h4>
+        <ul>
+            <li><strong>メソッド</strong>: <code>GET</code></li>
+            <li><strong>URLパラメータ</strong>: 最初のパラメータ名が「キー」として扱われます。パラメータの値は無視されます。</li>
+        </ul>
+        <h4>2.2.2. レスポンス仕様</h4>
+        <ul>
+            <li><strong>成功時</strong>: キーがキャッシュに存在した場合、対応する値がプレーンテキスト(<code>Content-Type: text/plain</code>)で返されます。</li>
+            <li><strong>失敗時（キー不在・無効）</strong>: キーがキャッシュに存在しない、またはキーの形式が不正な場合、空の文字列が返されます。</li>
+        </ul>
+
+        <h2>3. ライブラリとしての利用</h2>
+        <p>
+            本スクリプトを他のGoogle Apps Scriptプロジェクトからライブラリとしてインポートすることで、キャッシュ機能を直接利用できます。
+        </p>
+        <h3>3.1. セットアップ</h3>
+        <ol>
+            <li>ライブラリを利用したいスクリプトのプロジェクトを開きます。</li>
+            <li>エディタの左側メニューにある「ライブラリ」の横の「+」アイコンをクリックします。</li>
+            <li>「スクリプトID」の入力欄に、本プロジェクトのスクリプトIDを貼り付け、「検索」をクリックします。</li>
+            <li>バージョンを選択し、「識別子」を（例: <code>PubCache</code>）設定して「追加」ボタンをクリックします。</li>
+        </ol>
+
+        <h3>3.2. 利用可能な関数</h3>
+        <p>
+            標準の<code>Cache</code>クラスが提供するメソッドと互換性のある以下のグローバル関数が利用できます。
+        </p>
+        <table>
+            <thead>
+                <tr><th>関数名</th><th>説明</th></tr>
+            </thead>
+            <tbody>
+                <tr><td><code>getEndpoint(key)</code></td><td>指定されたキーに対応するAPIエンドポイントURLを返します。キーが無効な場合は<code>null</code>を返します。</td></tr>
+                <tr><td><code>get(key)</code></td><td>指定されたキーに対応する値を取得します。成功すると有効期限がリセットされます。</td></tr>
+                <tr><td><code>put(key, value, expirationInSeconds)</code></td><td>キーと値のペアを保存します。<code>expirationInSeconds</code>は任意です。</td></tr>
+                <tr><td><code>putAll(values, expirationInSeconds)</code></td><td>複数のキーと値のペアをオブジェクト形式で保存します。</td></tr>
+                <tr><td><code>remove(key)</code></td><td>指定されたキーの値を削除します。</td></tr>
+                <tr><td><code>removeAll(keys)</code></td><td>指定されたキーのリストに一致するすべての値を削除します。</td></tr>
+            </tbody>
+        </table>
+
+        <h3>3.3. 使用例</h3>
+        <pre><code>function myFunction() {
+  const myKey = '...（有効なキー）...';
+  const myValue = 'This is a test value.';
+
+  // PubCacheライブラリを使って値を保存
+  PubCache.put(myKey, myValue);
+
+  // APIエンドポイントのURLを取得
+  const endpointUrl = PubCache.getEndpoint(myKey);
+  Logger.log(endpointUrl); // "https://script.google.com/macros/s/.../exec?{myKey}"
+
+  // 保存した値を取得
+  const cachedValue = PubCache.get(myKey);
+  Logger.log(cachedValue); // "This is a test value."
+}</code></pre>
+
+        <h2>4. 技術仕様</h2>
+        <h3>4.1. キーの要件</h3>
+        <p>キャッシュのキーとして使用される文字列は、以下の要件を満たす必要があります。</p>
+        <ul>
+            <li><strong>形式</strong>: 32バイト以上のオクテット列をBase64urlエンコードした文字列。</li>
+            <li><strong>長さ</strong>: クライアントサイドおよびサーバーサイドで、文字列長が<strong>43文字以上</strong>であることが検証されます。これは32バイトのデータをパディングなしのBase64url形式にエンコードした際の最小長に相当します。</li>
+        </ul>
+        <h3>4.2. キャッシュの仕様</h3>
+        <ul>
+            <li><strong>サービス</strong>: Google Apps Script の <code>CacheService.getScriptCache()</code></li>
+            <li><strong>有効期限</strong>: 新規保存時および読み出し成功時に <strong>21600秒 (6時間)</strong> に設定（またはリセット）されます。</li>
+        </ul>
+        <h3>4.3. クライアントサイドの永続化</h3>
+        <ul>
+            <li><strong>技術</strong>: ブラウザの <code>localStorage</code></li>
+            <li><strong>保存データ</strong>: 操作に成功したキーの履歴（最大10件）</li>
+        </ul>
+    </div>
+    
+    <script>
+      const baseUrl = "<?!= baseUrl ?>";
+    </script>
+</body>
+</html>

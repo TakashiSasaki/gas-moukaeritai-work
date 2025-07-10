@@ -1,0 +1,14 @@
+{
+  "name": "Automate flows",
+  "id": "1M1amG2VwddxG9UpHjERfroY9wntSro8xSbEE02tVJnvsg7pQ_AsNS6p5",
+  "url": "https://script.google.com/d/1M1amG2VwddxG9UpHjERfroY9wntSro8xSbEE02tVJnvsg7pQ_AsNS6p5/edit?usp=drivesdk",
+  "lastUpdated": "2025-01-21T18:11:09.267Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbzPcLGsStrAq5Z6CFYXZINE-pYX9vb96Tqg_r8ALGs",
+      "target": "HEAD",
+      "description": ""
+    }
+  ]
+}

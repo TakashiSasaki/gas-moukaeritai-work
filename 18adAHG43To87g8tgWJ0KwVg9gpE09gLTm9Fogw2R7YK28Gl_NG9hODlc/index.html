@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ScriptCache Web App</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      margin: 0;
+      padding: 0; 
+      background-color: #f4f4f9;
+      color: #333;
+    }
+    header {
+      background-color: #343a40;
+      color: white;
+      padding: 10px 20px;
+      margin-bottom: 20px;
+      text-align: right;
+    }
+    header a {
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    header a:hover {
+      text-decoration: underline;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      padding: 20px;
+      background-color: #ffffff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    h1 {
+      font-size: 22px;
+      color: #333;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .label-wrapper {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-top: 15px;
+    }
+    .char-counter {
+        font-size: 12px;
+        color: #6c757d;
+        font-weight: normal;
+    }
+    label {
+      display: block;
+      font-weight: bold;
+      color: #555;
+    }
+    input[type="text"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 10px;
+      box-sizing: border-box;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 16px;
+      transition: border-color 0.3s, background-color 0.3s;
+    }
+    input[type="text"]:focus,
+    textarea:focus,
+    select:focus {
+      border-color: #007bff;
+      outline: none;
+    }
+    input[type="text"].valid {
+      border-color: #28a745;
+      background-color: #f0fff0;
+    }
+    .input-with-button {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .input-with-button input {
+      flex-grow: 1;
+      margin-top: 0;
+    }
+    .input-with-button button {
+       flex-shrink: 0;
+       margin-left: 0;
+    }
+    #value-input {
+      height: 150px;
+      resize: vertical;
+    }
+    .button-group {
+      margin-top: 25px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-left: 10px;
+      transition: background-color 0.3s, transform 0.1s;
+      background-color: #6c757d;
+      color: white;
+    }
+    button:active {
+        transform: scale(0.98);
+    }
+    #save-button { background-color: #28a745; }
+    #save-button:hover { background-color: #218838; }
+    #load-button { background-color: #007bff; }
+    #load-button:hover { background-color: #0056b3; }
+    #api-url-container {
+      margin-top: 20px;
+      padding: 15px;
+      border: 1px solid #d1ecf1;
+      background-color: #f8f9fa;
+      border-radius: 5px;
+      display: none;
+    }
+    #api-url-container a {
+      word-break: break-all;
+      color: #0056b3;
+    }
+    #copy-url-button {
+      padding: 5px 10px;
+      font-size: 14px;
+      margin-left: 15px;
+      background-color: #17a2b8;
+    }
+    #copy-url-button:hover { background-color: #138496; }
+    #status {
+      margin-top: 20px;
+      padding: 12px;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      display: none;
+      word-wrap: break-word;
+    }
+    .success { background-color: #d4edda; border-color: #c3e6cb; color: #155724; display: block; }
+    .error { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24; display: block; }
+    .info { background-color: #d1ecf1; border-color: #bee5eb; color: #0c5460; display: block; }
+  </style>
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="<?!= baseUrl ?>?readme">使い方 (Readme)</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <h1>キー・バリュー ストア (ScriptCache)</h1>
+    
+    <div class="label-wrapper">
+      <label for="key-input">キー (32バイト以上のBase64/base64url文字列)</label>
+      <span id="key-char-counter" class="char-counter">0 文字</span>
+    </div>
+    <div class="input-with-button">
+      <input type="text" id="key-input" placeholder="ここにキーを入力...">
+      <button id="generate-key-button" title="ランダムなキーを生成します">生成</button>
+    </div>
+
+    <div class="label-wrapper">
+        <label for="key-history">キー履歴</label>
+    </div>
+    <select id="key-history">
+      <option value="">履歴から選択...</option>
+    </select>
+    
+    <div class="label-wrapper">
+        <label for="value-input">値</label>
+        <span id="value-char-counter" class="char-counter">0 文字</span>
+    </div>
+    <textarea id="value-input" placeholder="ここに値を入力..."></textarea>
+    
+    <div class="button-group">
+      <button id="save-button">記憶</button>
+      <button id="load-button">呼び出し</button>
+    </div>
+    
+    <div id="status"></div>
+    
+    <div id="api-url-container">
+      <a href="#" id="api-url-link" target="_blank" rel="noopener noreferrer"></a>
+      <button id="copy-url-button" title="URLをクリップボードにコピー">コピー</button>
+    </div>
+  </div>
+
+  <script>
+    const baseUrl = "<?!= baseUrl ?>";
+    const keyInput = document.getElementById('key-input');
+    const valueInput = document.getElementById('value-input');
+    const saveButton = document.getElementById('save-button');
+    const loadButton = document.getElementById('load-button');
+    const statusDiv = document.getElementById('status');
+    const keyHistorySelect = document.getElementById('key-history');
+    const generateKeyButton = document.getElementById('generate-key-button');
+    const apiUrlContainer = document.getElementById('api-url-container');
+    const apiUrlLink = document.getElementById('api-url-link');
+    const copyUrlButton = document.getElementById('copy-url-button');
+    const keyCharCounter = document.getElementById('key-char-counter');
+    const valueCharCounter = document.getElementById('value-char-counter');
+    
+    const HISTORY_STORAGE_KEY = 'gasCacheKeyHistory';
+    const MAX_HISTORY_SIZE = 10;
+    // ★変更: 最低文字数を43に変更
+    const MIN_KEY_LENGTH = 43;
+    let keyHistory = [];
+
+    function validateKeyInput() {
+        const key = keyInput.value.trim();
+        const keyLength = keyInput.value.length;
+        keyCharCounter.textContent = `${keyLength} 文字`;
+        
+        if (key.length >= MIN_KEY_LENGTH) {
+            keyInput.classList.add('valid');
+        } else {
+            keyInput.classList.remove('valid');
+        }
+        updateApiUrlDisplay(key);
+    }
+    
+    /* 以下、変更のない関数は省略 */
+    function updateValueCounter() { valueCharCounter.textContent = `${valueInput.value.length} 文字`; }
+    function updateStatus(m,t){statusDiv.textContent=m;statusDiv.className=t;}
+    function loadHistory(){const s=localStorage.getItem(HISTORY_STORAGE_KEY);if(s){keyHistory=JSON.parse(s);}}
+    function saveHistory(){localStorage.setItem(HISTORY_STORAGE_KEY,JSON.stringify(keyHistory));}
+    function updateHistoryUI(){keyHistorySelect.innerHTML='<option value="">履歴から選択...</option>';keyHistory.forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;keyHistorySelect.appendChild(o);});}
+    function addKeyToHistory(k){const i=keyHistory.indexOf(k);if(i>-1){keyHistory.splice(i,1);}keyHistory.unshift(k);if(keyHistory.length>MAX_HISTORY_SIZE){keyHistory.pop();}saveHistory();updateHistoryUI();}
+    function updateApiUrlDisplay(k){if(k&&k.length>=MIN_KEY_LENGTH){const u=`${baseUrl}?${k}`;apiUrlLink.href=u;apiUrlLink.textContent=u;apiUrlContainer.style.display='block';}else{apiUrlContainer.style.display='none';}}
+    function triggerLoad(k){if(!k){updateStatus('キーが入力されていません。','error');return;}updateStatus('呼び出し中...','info');google.script.run.withSuccessHandler(r=>{addKeyToHistory(k);if(r===null){updateStatus('指定されたキーに対する値が見つかりませんでした。','info');valueInput.value='';}else if(typeof r==='string'&&r.startsWith('エラー発生:')){updateStatus(r,'error');valueInput.value='';}else{updateStatus('値を取得しました。','success');valueInput.value=r;}updateValueCounter();}).withFailureHandler(e=>{updateStatus('サーバーとの通信に失敗しました: '+e.message,'error');}).loadData(k);}
+    function generateRandomKey(){const r=new Uint8Array(32);crypto.getRandomValues(r);let b='';r.forEach(byte=>{b+=String.fromCharCode(byte);});const s=btoa(b);const u=s.replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');keyInput.value=u;validateKeyInput();updateStatus('新しいキーを生成しました。','info');}
+    copyUrlButton.addEventListener('click',()=>{const u=apiUrlLink.href;if(!u)return;const t=document.createElement('textarea');t.value=u;document.body.appendChild(t);t.select();try{document.execCommand('copy');updateStatus('URLをクリップボードにコピーしました。','success');}catch(err){updateStatus('コピーに失敗しました。','error');}document.body.removeChild(t);});
+    keyInput.addEventListener('input',validateKeyInput);
+    valueInput.addEventListener('input',updateValueCounter);
+    generateKeyButton.addEventListener('click',generateRandomKey);
+    saveButton.addEventListener('click',()=>{const k=keyInput.value.trim();const v=valueInput.value;if(!k){updateStatus('キーが入力されていません。','error');return;}if(k.length<MIN_KEY_LENGTH){updateStatus(`キーは${MIN_KEY_LENGTH}文字以上のBase64/base64url文字列である必要があります。`,'error');return;}updateStatus('保存中...','info');google.script.run.withSuccessHandler(r=>{if(r.startsWith('エラー:')){updateStatus(r,'error');}else{updateStatus(r,'success');addKeyToHistory(k);}}).withFailureHandler(e=>{updateStatus('サーバーとの通信に失敗しました: '+e.message,'error');}).saveData(k,v);});
+    loadButton.addEventListener('click',()=>{triggerLoad(keyInput.value.trim());});
+    keyHistorySelect.addEventListener('change',()=>{const s=keyHistorySelect.value;if(s){keyInput.value=s;validateKeyInput();triggerLoad(s);}});
+    function initialize(){loadHistory();updateHistoryUI();validateKeyInput();updateValueCounter();}
+    initialize();
+  </script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+{
+  "name": "Spreadsheet Helper",
+  "id": "1gZ1kwgVe2ZTz6B5c2N-OtdasCjRnuoeitNyuQmuESKYTrpryZk4GEMxG",
+  "url": "https://script.google.com/d/1gZ1kwgVe2ZTz6B5c2N-OtdasCjRnuoeitNyuQmuESKYTrpryZk4GEMxG/edit?usp=drivesdk",
+  "lastUpdated": "2025-01-22T18:24:29.197Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbxNYTKmwM0mpsPlv0sKai5ev_Az9GxqLCOmZps5GIbF",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbw18Ou5V505eY4TDIWmOCSTbr8KyuR8J2fkyzMlWzp86HjkO1l6",
+      "target": "2",
+      "description": "web app meta-version"
+    }
+  ]
+}

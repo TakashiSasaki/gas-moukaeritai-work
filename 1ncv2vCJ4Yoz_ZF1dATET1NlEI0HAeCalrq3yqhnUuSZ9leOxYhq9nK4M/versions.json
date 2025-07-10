@@ -1,0 +1,22 @@
+[
+  {
+    "version": 1,
+    "description": "テストするためにはデプロイしなければならないので。"
+  },
+  {
+    "version": 2,
+    "description": "release v2"
+  },
+  {
+    "version": 3,
+    "description": "release"
+  },
+  {
+    "version": 4,
+    "description": "release v4"
+  },
+  {
+    "version": 5,
+    "description": "release v5"
+  }
+]

@@ -1,4 +1,0 @@
-Found 3 deployments.
-- AKfycbwfkLOQB4BGsHcP6CFDgEoP0fydfTCc4wbyuY5x2Z8 @HEAD 
-- AKfycbwXgT8dPFrAKBeuDqjXKKZOX1YjbayFAujQ3LfGpICdGeacvpDmdXI772qiLysNfMwD @3 - クラウド同期、全画面対応
-- AKfycbyB7Co09qItpWBFk_dTPBV1okDfOS16qKsDypSaJscha_I8Vfi6J-ZhvctMfemwTGmh @4 - Sheet2対応

@@ -1,0 +1,19 @@
+{
+  "name": "GetFragmentPartOfUrlTest",
+  "id": "1A_kkWBH9eqn08Rir8tv_KdaVyYZkJt487UD69qAbQ0fGHCjKKTPwhC0H",
+  "url": "https://script.google.com/d/1A_kkWBH9eqn08Rir8tv_KdaVyYZkJt487UD69qAbQ0fGHCjKKTPwhC0H/edit?usp=drivesdk",
+  "lastUpdated": "2025-01-22T18:41:49.705Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbxSsq557h5yz-o_1dGIoZPy1GR1caRJZIu1NeHdbqo",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbxyrBwHW1Fa89GlU06QJ8RRgc0WWr6p_S3czBghW_1E5QQgP3U",
+      "target": "28",
+      "description": "web app meta-version"
+    }
+  ]
+}

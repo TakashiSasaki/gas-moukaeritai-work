@@ -1,3 +1,3 @@
 Found 2 deployments.
 - AKfycbxTdjPOI6Jr_AWz3lfAxhwokuP3r3HvtYO-vgWMc_-w @HEAD 
-- AKfycbz0a4RTpHE5Bxn3AeHWEAD7QHreptLqpa3HLxatARciZwYLJk8jd494G3Dd5_PF3WsJFg @7 - 公開用 Version 7
+- AKfycbz0a4RTpHE5Bxn3AeHWEAD7QHreptLqpa3HLxatARciZwYLJk8jd494G3Dd5_PF3WsJFg @9 - 公開用 Version 9

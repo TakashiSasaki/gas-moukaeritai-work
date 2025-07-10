@@ -1,0 +1,14 @@
+{
+  "name": "notion-page-title-exporter",
+  "id": "1J1eizA18n82rnRB0bWEWXQuyx6ca6FlI4rCQpsMX2K1-_RSj57HmU-cK",
+  "url": "https://script.google.com/d/1J1eizA18n82rnRB0bWEWXQuyx6ca6FlI4rCQpsMX2K1-_RSj57HmU-cK/edit?usp=drivesdk",
+  "lastUpdated": "2024-01-30T02:25:01.844Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbypi8Zs5Z4xBWbLkOHi5uzwGmVk3_fjk68dmTkio35l",
+      "target": "HEAD",
+      "description": ""
+    }
+  ]
+}

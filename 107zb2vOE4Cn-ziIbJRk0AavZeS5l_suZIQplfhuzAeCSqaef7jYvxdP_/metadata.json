@@ -1,0 +1,29 @@
+{
+  "name": "Public ScriptCache",
+  "id": "107zb2vOE4Cn-ziIbJRk0AavZeS5l_suZIQplfhuzAeCSqaef7jYvxdP_",
+  "url": "https://script.google.com/d/107zb2vOE4Cn-ziIbJRk0AavZeS5l_suZIQplfhuzAeCSqaef7jYvxdP_/edit?usp=drivesdk",
+  "lastUpdated": "2023-08-14T23:42:08.921Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbwkbqxXue9rtkbXxS-b6XhDwlNQ8M57yzAvCkv-pKir",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbwCk-bqUtw-nB5X5J6O1iWO4NpY3_V897tQex0ewF6UNFWeKfSlFj5acYlswUZ9ip84kQ",
+      "target": "2",
+      "description": "doPostとdoGetを実装した。"
+    },
+    {
+      "id": "AKfycbwOR48gyJaPmrkdD5d2H007MYun7brScO8qZeuRNn6-8RpL25MTdUjKsjcVJnT6OaMtRA",
+      "target": "3",
+      "description": "doPost をテストしてる"
+    },
+    {
+      "id": "AKfycbwN5eiwTjShyhZFaYI7RemVb5L_xB9r_xiXk2yfM39wT-oPnbfrwBTTV_-iDa7J4iCsPg",
+      "target": "1",
+      "description": ""
+    }
+  ]
+}

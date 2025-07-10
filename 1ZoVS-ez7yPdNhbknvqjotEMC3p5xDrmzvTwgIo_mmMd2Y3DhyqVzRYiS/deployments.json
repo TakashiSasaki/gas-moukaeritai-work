@@ -1,0 +1,17 @@
+[
+  {
+    "id": "AKfycbwfkLOQB4BGsHcP6CFDgEoP0fydfTCc4wbyuY5x2Z8",
+    "target": "HEAD",
+    "description": ""
+  },
+  {
+    "id": "AKfycbyB7Co09qItpWBFk_dTPBV1okDfOS16qKsDypSaJscha_I8Vfi6J-ZhvctMfemwTGmh",
+    "target": "4",
+    "description": "Sheet2対応"
+  },
+  {
+    "id": "AKfycbwXgT8dPFrAKBeuDqjXKKZOX1YjbayFAujQ3LfGpICdGeacvpDmdXI772qiLysNfMwD",
+    "target": "3",
+    "description": "クラウド同期、全画面対応"
+  }
+]

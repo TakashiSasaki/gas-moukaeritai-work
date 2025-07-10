@@ -1,0 +1,14 @@
+{
+  "name": "String Utility",
+  "id": "1toCTzwoHcWb0VQGQ3aYO9QZpRY9P5f4g3Hn4K9FCWFIth7OJjW4jssP5",
+  "url": "https://script.google.com/d/1toCTzwoHcWb0VQGQ3aYO9QZpRY9P5f4g3Hn4K9FCWFIth7OJjW4jssP5/edit?usp=drivesdk",
+  "lastUpdated": "2021-01-17T12:01:00.483Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbyKLsnZ4dm6Dc2QiNyQkrL5D1Balmi7-McpGkAv1Ru2",
+      "target": "HEAD",
+      "description": ""
+    }
+  ]
+}

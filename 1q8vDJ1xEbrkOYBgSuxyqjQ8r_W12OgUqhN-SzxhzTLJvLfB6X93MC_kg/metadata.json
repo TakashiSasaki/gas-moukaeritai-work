@@ -1,0 +1,19 @@
+{
+  "name": "MyProgressStrip",
+  "id": "1q8vDJ1xEbrkOYBgSuxyqjQ8r_W12OgUqhN-SzxhzTLJvLfB6X93MC_kg",
+  "url": "https://script.google.com/d/1q8vDJ1xEbrkOYBgSuxyqjQ8r_W12OgUqhN-SzxhzTLJvLfB6X93MC_kg/edit?usp=drivesdk",
+  "lastUpdated": "2025-01-23T18:41:28.184Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbw91afYd_VyMWUpDXsPfkN4tbERJ3sT_fsFvzt60Gc",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbxfndtypnBWfv18QrpdtUkN5G3ZKOrwX1LP-wbaiicXTR0SIbg",
+      "target": "1",
+      "description": "web app meta-version"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "Layout Library",
+  "id": "1cQ2Y30dXVHjU6JVuod9G_aOXGo-9CRAkIej7-lG8YCVPQUcJrKg9kVvj",
+  "url": "https://script.google.com/d/1cQ2Y30dXVHjU6JVuod9G_aOXGo-9CRAkIej7-lG8YCVPQUcJrKg9kVvj/edit?usp=drivesdk",
+  "lastUpdated": "2025-01-24T18:43:23.871Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbyJX3LCrJTONsTB80ZBuwCA32YYQJSzRC7mH6ygL1A",
+      "target": "HEAD",
+      "description": ""
+    }
+  ]
+}

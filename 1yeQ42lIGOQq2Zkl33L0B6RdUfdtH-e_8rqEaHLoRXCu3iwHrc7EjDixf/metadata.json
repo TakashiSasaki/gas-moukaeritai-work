@@ -1,0 +1,29 @@
+{
+  "name": "Moodle true/false quiz validator",
+  "id": "1yeQ42lIGOQq2Zkl33L0B6RdUfdtH-e_8rqEaHLoRXCu3iwHrc7EjDixf",
+  "url": "https://script.google.com/d/1yeQ42lIGOQq2Zkl33L0B6RdUfdtH-e_8rqEaHLoRXCu3iwHrc7EjDixf/edit?usp=drivesdk",
+  "lastUpdated": "2025-05-21T11:18:27.179Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbzUG8It2elOHlcYYtBxQxCoGpZh26IQht7xdo00Un6c",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbxtG5BtgTXALn7ugAptAGBxetsNnDVq7cAOvF3t4SjO6cw60WEKeqjIs5vKK32nxKacBQ",
+      "target": "3",
+      "description": "解説付き"
+    },
+    {
+      "id": "AKfycbzRcYKl0SYX5UPPJNnRFwmzKrnCa0-YBAe9g3hAuU84a49nmyOyWu1vcqJstbHKGkh3EQ",
+      "target": "1",
+      "description": "Version 1.0: Moodle XML True/False Question Analyzer. Supports Moodle XML input via text paste, file drag & drop, or local file upload. The application parses questions, extracts titles, question text, and the Moodle-defined correct answer (true/false). It currently features a dummy AI for answer inference and provides a comparison with Moodle's correct answer."
+    },
+    {
+      "id": "AKfycbyAZEkXTBn4iZTZzH9oNG6u_-SeR-B2MNXf1cUWJ_ZygTXKhwB2LuVAsCsHQVVD2qEPDQ",
+      "target": "2",
+      "description": "2025-05-21 DEMO"
+    }
+  ]
+}

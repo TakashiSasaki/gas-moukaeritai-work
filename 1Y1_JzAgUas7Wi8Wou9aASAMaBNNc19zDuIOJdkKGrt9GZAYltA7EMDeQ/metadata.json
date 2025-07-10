@@ -1,0 +1,14 @@
+{
+  "name": "Snippets For Spreadsheet",
+  "id": "1Y1_JzAgUas7Wi8Wou9aASAMaBNNc19zDuIOJdkKGrt9GZAYltA7EMDeQ",
+  "url": "https://script.google.com/d/1Y1_JzAgUas7Wi8Wou9aASAMaBNNc19zDuIOJdkKGrt9GZAYltA7EMDeQ/edit?usp=drivesdk",
+  "lastUpdated": "2021-03-11T17:34:16.668Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbwtGs5WGzf4ILh3cooBAP70b1JUd9wFTqd7TaW_h-a6",
+      "target": "HEAD",
+      "description": ""
+    }
+  ]
+}
