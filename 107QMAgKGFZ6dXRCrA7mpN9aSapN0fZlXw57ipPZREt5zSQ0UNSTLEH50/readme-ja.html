@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Package Viewer アプリの使い方</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+      line-height: 1.7;
+      color: #333;
+      background-color: #f9f9f9;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 20px 40px;
+    }
+    h1, h2, h3 {
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+    }
+    h1 { font-size: 2em; }
+    h2 { font-size: 1.5em; }
+    h3 { font-size: 1.2em; }
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      background-color: #f0f0f0;
+      padding: .2em .4em;
+      margin: 0;
+      font-size: 85%;
+      border-radius: 3px;
+    }
+    pre {
+      background-color: #f0f0f0;
+      padding: 16px;
+      overflow: auto;
+      border-radius: 3px;
+    }
+    pre code {
+      padding: 0;
+      margin: 0;
+      font-size: 100%;
+      background-color: transparent;
+    }
+    strong {
+      color: #c0392b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Package Viewer アプリの使い方 (README)</h1>
+
+    <h2>概要</h2>
+    <p>このウェブアプリは、あなたのAndroidデバイスにインストールされているアプリのパッケージ名リストを表示・管理するためのツールです。<br>
+    データをアプリに登録するには、特定の形式でご自身のGmailアカウント宛にメールを送信する必要があります。</p>
+
+    <h2>メール送信の要件</h2>
+    <p>アプリが正しくデータを認識するためには、以下のルールに従ってメールを送信してください。</p>
+
+    <h3>1. 宛先 (To)</h3>
+    <p>あなた自身のGmailアドレス (<code>xxxx@gmail.com</code>)</p>
+
+    <h3>2. 送信元 (From)</h3>
+    <p>あなた自身のGmailアドレス (<code>xxxx@gmail.com</code>)</p>
+
+    <h3>3. 件名 (Subject)</h3>
+    <p><strong><code>Android package list</code></strong><br>
+    この件名は完全に一致している必要があります。大文字・小文字も区別されます。</p>
+
+    <h3>4. 本文 (Body)</h3>
+    <p>メールの本文には、以下の形式の<strong>JSONデータのみ</strong>を記述してください。余計な挨拶文や署名は含めないでください。</p>
+    
+    <h4>JSON形式:</h4>
+    <pre><code>[
+  "デバイスのモデル名",
+  "Android ID",
+  [
+    "パッケージ名1",
+    "パッケージ名2",
+    "パッケージ名3",
+    ...
+  ]
+]</code></pre>
+
+    <h4>各要素の説明:</h4>
+    <ul>
+      <li><strong><code>デバイスのモデル名</code> (文字列):</strong> データを識別するための任意の名前です。例: <code>"Pixel 8"</code>, <code>"Galaxy S24"</code></li>
+      <li><strong><code>Android ID</code> (文字列):</strong> デバイス固有のIDです。</li>
+      <li><strong><code>パッケージ名リスト</code> (文字列の配列):</strong> インストールされているアプリのパッケージ名のリストです。</li>
+    </ul>
+
+    <h2>具体的なメールの例</h2>
+    <p><strong>件名:</strong></p>
+    <pre><code>Android package list</code></pre>
+    <p><strong>本文:</strong></p>
+    <pre><code>[
+  "Pixel 8 Pro",
+  "1234567890abcdef",
+  [
+    "com.android.chrome",
+    "com.google.android.gm",
+    "com.google.android.apps.maps",
+    "com.google.android.youtube"
+  ]
+]</code></pre>
+
+    <h2>推奨されるデータ送信方法</h2>
+    <p>手動でメールを作成・送信することも可能ですが、必要な情報を自動で取得し、正しい形式でメールを送信するために、<strong>Automate</strong>アプリと連携することをお勧めします。<br>
+    アプリのフッターに記載されているリンクから、対応するコミュニティフローをダウンロードしてご利用ください。</p>
+  </div>
+</body>
+</html>

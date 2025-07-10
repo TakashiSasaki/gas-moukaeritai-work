@@ -3,7 +3,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- viewportタグはCode.gsで設定 -->
   <title>Android Package List Viewer</title>
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
   <script type="text/javascript">
@@ -148,7 +148,11 @@
     .content-box { border: 1px solid #ddd; border-radius: 8px; padding: 20px 25px; background-color: #fff; position: relative; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     .user-info { position: absolute; top: 10px; right: 25px; font-size: 0.9em; color: #5f6368; }
     .header-flex { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; flex-wrap: wrap; }
+    
+    .title-group { display: flex; align-items: center; }
+    .header-icon { width: 36px; height: 36px; margin-right: 15px; }
     h1 { color: #1a73e8; margin: 0; font-size: 1.8em; }
+
     #device_selector { font-size: 1em; padding: 8px 10px; border-radius: 4px; border: 1px solid #ccc; background-color: #fff; }
     .meta-info { background-color: #e8f0fe; border-left: 4px solid #1a73e8; padding: 10px 15px; margin: 20px 0; }
     
@@ -162,11 +166,11 @@
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
     .no-data-message, .error-message { text-align: center; color: #777; padding: 80px 20px; font-size: 1.1em; }
-    .footer-instructions { margin-top: 25px; padding-top: 15px; border-top: 1px solid #ddd; display: flex; align-items: center; gap: 20px; }
-    .footer-instructions img { border-radius: 12px; width: 60px; height: 60px; }
+    .footer-instructions { margin-top: 25px; padding-top: 15px; border-top: 1px solid #ddd; }
     .footer-instructions p { margin: 4px 0; font-size: 0.9em; color: #555; }
     .footer-instructions a { color: #1a73e8; text-decoration: none; font-weight: bold; }
     .footer-instructions a:hover { text-decoration: underline; }
+    .readme-links { margin-top: 1em; }
 
     /* モバイル用のスタイル */
     @media (max-width: 600px) {
@@ -198,8 +202,6 @@
         width: 100%;
       }
       .footer-instructions {
-        flex-direction: column;
-        align-items: flex-start;
         text-align: left;
       }
     }
@@ -222,7 +224,12 @@
 
       <div id="main_content">
         <div id="main_content_header" class="header-flex">
-          <h1>Package Viewer</h1>
+          <div class="title-group">
+            <!-- ▼▼▼ ここから変更 ▼▼▼ -->
+            <img src="<?= faviconUrl ?>" alt="App Icon" class="header-icon">
+            <!-- ▲▲▲ ここまで変更 ▲▲▲ -->
+            <h1>Package Viewer</h1>
+          </div>
           <select id="device_selector" title="表示するデバイスを選択"></select>
         </div>
       
@@ -238,12 +245,13 @@
       </div>
 
       <div class="footer-instructions">
-        <a href="https://llamalab.com/automate/" target="_blank" rel="noopener noreferrer">
-          <img src="https://llamalab.com/img/automate/ic_launcher-128.png" alt="Automate icon">
-        </a>
         <div>
           <p>このアプリは、<a href="https://llamalab.com/automate/" target="_blank" rel="noopener noreferrer"><strong>Automate</strong></a> と連携します。</p>
           <p>データを送信するには、<a href="https://llamalab.com/automate/community/flows/51123" target="_blank" rel="noopener noreferrer">このコミュニティフロー</a>を実行してください。</p>
+          <p class="readme-links">
+            <a href="<?= ScriptApp.getService().getUrl() ?>?page=readme-ja" target="_blank">アプリの使い方 (日本語)</a> | 
+            <a href="<?= ScriptApp.getService().getUrl() ?>?page=readme-en" target="_blank">How to Use (English)</a>
+          </p>
         </div>
       </div>
     </div>
