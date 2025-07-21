@@ -11,14 +11,14 @@
       "description": ""
     },
     {
-      "id": "AKfycbx-VSmL2tjiKQgAUSBSsBQoSjl0xfZBxMtp5VQbdFWyGvQu3Zo",
-      "target": "1",
-      "description": "web app meta-version"
-    },
-    {
       "id": "AKfycbyMoLCtO1fY2gbX1sFdWQcOJCqIvQqggtsUP9stSvZxIRBREx4DemFnvGy8eEynCBgy",
       "target": "2",
       "description": "認証なしで"
+    },
+    {
+      "id": "AKfycbx-VSmL2tjiKQgAUSBSsBQoSjl0xfZBxMtp5VQbdFWyGvQu3Zo",
+      "target": "1",
+      "description": "web app meta-version"
     }
   ]
 }
