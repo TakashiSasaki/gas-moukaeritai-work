@@ -1,0 +1,14 @@
+{
+  "name": "rename-file-gemini",
+  "id": "1eemaTl1sGS9LyDLY4MyflHQdcEDwMp-JNXz6bABf1cY-CPcc4wKocROt",
+  "url": "https://script.google.com/d/1eemaTl1sGS9LyDLY4MyflHQdcEDwMp-JNXz6bABf1cY-CPcc4wKocROt/edit?usp=drivesdk",
+  "lastUpdated": "2025-08-03T23:50:19.988Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbzk-b9_B2Bhmmi-rbASJOCXDwC7BfciXmmb1vTHXFcR",
+      "target": "HEAD",
+      "description": ""
+    }
+  ]
+}
