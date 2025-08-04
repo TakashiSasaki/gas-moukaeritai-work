@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "version": 1,
+    "description": "公開"
+  },
+  {
+    "version": 2,
+    "description": "公開 v2"
+  }
+]

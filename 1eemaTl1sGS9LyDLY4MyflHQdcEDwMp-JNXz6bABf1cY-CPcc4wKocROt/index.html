@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <?!= include('style'); ?>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1><span class="material-icons">drive_file_rename_outline</span> Googleドライブフォルダ内ファイル名生成＆一括リネーム</h1>
+        <div class="header-actions">
+          <button id="stop-all-btn" class="danger-btn hidden">
+            <span class="material-icons">cancel</span> 緊急停止
+          </button>
+          <button id="open-settings-btn" class="icon-btn" title="設定">
+            <span class="material-icons">settings</span>
+          </button>
+        </div>
+      </header>
+      
+      <main>
+        <div class="input-section">
+          <label for="folder-id">Google Drive フォルダID または URL:</label>
+          <div class="input-group">
+            <input type="text" id="folder-id" placeholder="対象のフォルダIDまたはURLを貼り付け">
+            <button id="list-files-btn" class="primary-btn">
+              <span class="material-icons">folder_open</span> ファイルを読み込む
+            </button>
+          </div>
+          <p class="help-text">フォルダIDは、ブラウザでフォルダを開いたときのURL末尾の文字列です。</p>
+        </div>
+        
+        <div id="loader" class="loader hidden">
+          <div class="spinner"></div>
+          <p id="loader-text"></p>
+        </div>
+        
+        <div id="error-message" class="error hidden"></div>
+        
+        <div id="results" class="hidden">
+          <div class="filter-section">
+            <label for="filter-patterns">フィルタリングパターン (正規表現, 1行に1パターン):</label>
+            <textarea id="filter-patterns" rows="4"></textarea>
+          </div>
+
+          <div class="results-header">
+            <h2 id="results-count"></h2>
+            <button id="rename-selected-btn" class="success-btn disabled" disabled>
+              <span class="material-icons">task_alt</span> 選択したファイルをリネーム
+            </button>
+          </div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="select-all-checkbox"></th>
+                  <!-- ★追加: サムネイル列 -->
+                  <th class="thumbnail-col">サムネイル</th>
+                  <th>現在のファイル名</th>
+                  <th>AIが提案する新しいファイル名</th>
+                  <th class="action-col">アクション</th>
+                </tr>
+              </thead>
+              <tbody id="file-list-body">
+                <!-- JavaScriptによってファイルリストがここに挿入されます -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- APIキー設定モーダル -->
+    <div id="settings-modal" class="modal-overlay hidden">
+      <div class="modal-content">
+        <h2><span class="material-icons">vpn_key</span> APIキー設定</h2>
+        <div class="user-info">
+          <span class="material-icons">account_circle</span>
+          <span id="user-email"></span>
+        </div>
+        <p>Google AI Studioで取得したAPIキーを入力してください。</p>
+        <input type="password" id="api-key-input" placeholder="ここにAPIキーを貼り付け">
+        <div class="modal-actions">
+          <button id="save-api-key-btn" class="primary-btn">保存</button>
+          <button id="close-settings-btn" class="secondary-btn">閉じる</button>
+        </div>
+        <p id="api-key-status" class="status-text"></p>
+      </div>
+    </div>
+    
+    <?!= include('script'); ?>
+  </body>
+</html>

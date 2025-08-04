@@ -1,0 +1,232 @@
+<style>
+  :root {
+    --primary-color: #4285F4;
+    --success-color: #34A853;
+    --danger-color: #EA4335;
+    --warning-color: #FBBC04;
+    --light-gray: #f1f3f4;
+    --medium-gray: #e0e0e0;
+    --dark-gray: #5f6368;
+    --text-color: #202124;
+    --bg-color: #ffffff;
+    --border-radius: 8px;
+  }
+  
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background-color: var(--light-gray);
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+    line-height: 1.6;
+  }
+  
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    background-color: var(--bg-color);
+    padding: 20px 30px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+  }
+  
+  header {
+    position: relative;
+    text-align: center;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--medium-gray);
+    padding-bottom: 1rem;
+  }
+  
+  header h1 {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--primary-color);
+    font-size: 24px;
+    margin-bottom: 1rem;
+  }
+
+  .header-actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .icon-btn {
+    background: none;
+    border: none;
+    color: var(--dark-gray);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .icon-btn:hover {
+    background-color: var(--light-gray);
+  }
+
+  .input-section { margin-bottom: 2rem; }
+  .input-group { display: flex; gap: 10px; }
+
+  input[type="text"], input[type="password"], textarea {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid var(--medium-gray);
+    border-radius: var(--border-radius);
+    font-size: 16px;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+  textarea {
+    resize: vertical;
+  }
+
+  input[type="text"]:focus, input[type="password"]:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+  }
+  
+  .help-text { font-size: 0.85rem; color: var(--dark-gray); margin-top: 5px; }
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 15px;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s, color 0.2s;
+    color: white;
+  }
+  button .material-icons {
+    font-size: 18px;
+  }
+
+  .primary-btn { background-color: var(--primary-color); }
+  .primary-btn:hover { background-color: #3367D6; }
+  .success-btn { background-color: var(--success-color); }
+  .success-btn:hover { background-color: #2e8a45; }
+  .danger-btn { background-color: var(--danger-color); }
+  .danger-btn:hover { background-color: #c53929; }
+  .secondary-btn {
+    background-color: var(--light-gray);
+    color: var(--dark-gray);
+    border: 1px solid var(--medium-gray);
+  }
+  .secondary-btn:hover { background-color: var(--medium-gray); }
+  
+  button.disabled, button:disabled {
+    background-color: #ccc !important;
+    cursor: not-allowed !important;
+    border-color: #ccc !important;
+    color: #666 !important;
+  }
+
+  .loader { text-align: center; padding: 40px 0; }
+  .spinner {
+    border: 4px solid var(--light-gray);
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 10px;
+  }
+  .spinner-small {
+    width: 16px; height: 16px; border-width: 2px;
+    border-top-color: var(--dark-gray);
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+  .hidden { display: none !important; }
+  
+  .error {
+    background-color: #fce8e6;
+    color: var(--danger-color);
+    padding: 15px;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--danger-color);
+    margin-bottom: 1rem;
+  }
+
+  .filter-section { margin-bottom: 1.5rem; }
+  .filter-section label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
+
+  .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+  .table-container { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--medium-gray); vertical-align: middle; }
+  th { background-color: var(--light-gray); font-weight: 500; }
+  tbody tr:hover { background-color: #f8f9fa; }
+
+  .thumbnail-col { width: 80px; text-align: center !important; }
+  .thumbnail-cell { text-align: center; height: 62px; } /* ボタンの高さを考慮 */
+  .thumbnail-img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 4px;
+    background-color: var(--light-gray);
+  }
+  /* ★追加: サムネイル取得ボタンのスタイル */
+  .thumbnail-btn {
+    padding: 5px;
+    min-width: 60px;
+    height: 60px;
+  }
+
+  .action-col { width: 120px; text-align: center !important; }
+  .action-buttons { display: flex; flex-direction: column; gap: 5px; align-items: center; }
+  .action-buttons .icon-btn { padding: 4px; }
+  .action-buttons .spinner-small { margin: 5px 0; }
+  .action-buttons .status-text { font-size: 12px; color: var(--dark-gray); }
+  .action-buttons .status-error { color: var(--danger-color); font-weight: bold; }
+
+  /* Modal Styles */
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+  .modal-content {
+    background-color: white;
+    padding: 30px;
+    border-radius: var(--border-radius);
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  }
+  .modal-content h2 { display: flex; align-items: center; gap: 10px; margin-top: 0; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+  #api-key-input { width: calc(100% - 24px); }
+  #api-key-status { margin-top: 10px; font-weight: bold; }
+
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background-color: var(--light-gray);
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+    color: var(--dark-gray);
+  }
+</style>
