@@ -2,7 +2,7 @@
   "name": "rename-by-gemini",
   "id": "1eemaTl1sGS9LyDLY4MyflHQdcEDwMp-JNXz6bABf1cY-CPcc4wKocROt",
   "url": "https://script.google.com/d/1eemaTl1sGS9LyDLY4MyflHQdcEDwMp-JNXz6bABf1cY-CPcc4wKocROt/edit?usp=drivesdk",
-  "lastUpdated": "2025-08-04T02:54:45.668Z",
+  "lastUpdated": "2025-08-04T03:32:23.173Z",
   "application.json": null,
   "deployments.json": [
     {
@@ -12,8 +12,8 @@
     },
     {
       "id": "AKfycbzwaNYlDJ8ewKBKvLRzgnCjRc95u1Yh8X6WXGfZImkhUxMxJO8QAuEr1Hrx807se6BT",
-      "target": "2",
-      "description": "公開 v2"
+      "target": "4",
+      "description": "公開 v4"
     }
   ]
 }
