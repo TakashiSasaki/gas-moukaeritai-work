@@ -6,5 +6,13 @@
   {
     "version": 2,
     "description": "公開 v2"
+  },
+  {
+    "version": 3,
+    "description": "公開 v3"
+  },
+  {
+    "version": 4,
+    "description": "公開 v4"
   }
 ]

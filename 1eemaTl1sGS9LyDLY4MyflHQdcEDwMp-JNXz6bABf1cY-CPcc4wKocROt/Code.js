@@ -89,23 +89,31 @@ function include(filename) {
 }
 
 /**
- * ★変更: 指定されたフォルダ内のファイル情報（サムネイルなし）を取得する
+ * ★変更: 指定されたフォルダ内のファイル情報と、キャッシュにあればサムネイルも取得する
  * @param {string} folderId - GoogleドライブのフォルダID
- * @returns {Array<Object>} - ファイル情報の配列 {id, name, dateCreated, mimeType}
+ * @returns {Array<Object>} - ファイル情報の配列 {id, name, dateCreated, mimeType, thumbnailDataUrl}
  */
 function getFilesFromFolder(folderId) {
   try {
     const folder = DriveApp.getFolderById(folderId);
     const files = folder.getFiles();
     const allFiles = [];
+    const cache = CacheService.getUserCache();
 
     while (files.hasNext()) {
       const file = files.next();
+      const fileId = file.getId();
+      const cacheKey = 'thumbV3_' + fileId;
+      
+      // ★変更: ファイルリスト取得時にキャッシュを確認
+      const thumbnailDataUrl = cache.get(cacheKey);
+
       allFiles.push({
-        id: file.getId(),
+        id: fileId,
         name: file.getName(),
         dateCreated: file.getDateCreated().toISOString(),
-        mimeType: file.getMimeType()
+        mimeType: file.getMimeType(),
+        thumbnailDataUrl: thumbnailDataUrl // キャッシュがあればURLが、なければnullが入る
       });
     }
     
@@ -118,27 +126,36 @@ function getFilesFromFolder(folderId) {
 }
 
 /**
- * ★追加: 指定されたファイルIDのサムネイルを取得（キャッシュ利用）
+ * 指定されたファイルIDのサムネイルを取得（キャッシュ利用）
  * @param {string} fileId - ファイルのID
  * @returns {string|null} - サムネイルのBase64データURL、またはnull
  */
 function getThumbnailDataUrl(fileId) {
   const cache = CacheService.getUserCache();
-  const cacheKey = 'thumb_' + fileId;
+  const cacheKey = 'thumbV3_' + fileId;
   let thumbnailDataUrl = cache.get(cacheKey);
 
   if (thumbnailDataUrl === null) {
     try {
-      const file = DriveApp.getFileById(fileId);
-      const thumbnailBlob = file.getThumbnail();
-      if (thumbnailBlob) {
+      const fileMetadata = Drive.Files.get(fileId, { fields: "thumbnailLink" });
+      const thumbnailUrl = fileMetadata.thumbnailLink;
+      
+      if (thumbnailUrl) {
+        const response = UrlFetchApp.fetch(thumbnailUrl, {
+          headers: {
+            Authorization: 'Bearer ' + ScriptApp.getOAuthToken()
+          }
+        });
+        const thumbnailBlob = response.getBlob();
         thumbnailDataUrl = `data:${thumbnailBlob.getContentType()};base64,${Utilities.base64Encode(thumbnailBlob.getBytes())}`;
-        cache.put(cacheKey, thumbnailDataUrl, 21600); // 6時間キャッシュ
+        cache.put(cacheKey, thumbnailDataUrl, 21600);
       }
     } catch (e) {
-      console.log(`サムネイル取得失敗: fileId=${fileId}, エラー: ${e.message}`);
+      console.log(`Drive APIでのサムネイル取得失敗: fileId=${fileId}, エラー: ${e.message}`);
       thumbnailDataUrl = null;
     }
+  } else {
+    console.log(`サムネイルをキャッシュから取得: fileId=${fileId}`);
   }
   return thumbnailDataUrl;
 }

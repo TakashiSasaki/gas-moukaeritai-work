@@ -165,7 +165,18 @@
   .filter-section { margin-bottom: 1.5rem; }
   .filter-section label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
 
-  .results-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+  /* ★変更: results-headerにgapを追加 */
+  .results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    gap: 10px; /* ボタン間のスペース */
+  }
+  .results-header h2 {
+    margin-right: auto; /* h2を左に、ボタン群を右に寄せる */
+  }
+
   .table-container { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
   th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--medium-gray); vertical-align: middle; }
@@ -173,7 +184,7 @@
   tbody tr:hover { background-color: #f8f9fa; }
 
   .thumbnail-col { width: 80px; text-align: center !important; }
-  .thumbnail-cell { text-align: center; height: 62px; } /* ボタンの高さを考慮 */
+  .thumbnail-cell { text-align: center; height: 62px; }
   .thumbnail-img {
     width: 60px;
     height: 60px;
@@ -181,7 +192,6 @@
     border-radius: 4px;
     background-color: var(--light-gray);
   }
-  /* ★追加: サムネイル取得ボタンのスタイル */
   .thumbnail-btn {
     padding: 5px;
     min-width: 60px;

@@ -47,6 +47,10 @@
 
           <div class="results-header">
             <h2 id="results-count"></h2>
+            <!-- ★追加: 全サムネイル取得ボタン -->
+            <button id="get-all-thumbnails-btn" class="secondary-btn">
+              <span class="material-icons">collections</span> 全てのサムネイルを取得
+            </button>
             <button id="rename-selected-btn" class="success-btn disabled" disabled>
               <span class="material-icons">task_alt</span> 選択したファイルをリネーム
             </button>
@@ -56,7 +60,6 @@
               <thead>
                 <tr>
                   <th><input type="checkbox" id="select-all-checkbox"></th>
-                  <!-- ★追加: サムネイル列 -->
                   <th class="thumbnail-col">サムネイル</th>
                   <th>現在のファイル名</th>
                   <th>AIが提案する新しいファイル名</th>

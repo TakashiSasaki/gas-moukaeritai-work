@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const resultsCount = document.getElementById('results-count');
   const filterPatternsTextarea = document.getElementById('filter-patterns');
   const stopAllBtn = document.getElementById('stop-all-btn');
+  // ★追加: 全サムネイル取得ボタン
+  const getAllThumbnailsBtn = document.getElementById('get-all-thumbnails-btn');
   
   // Settings Modal
   const settingsModal = document.getElementById('settings-modal');
@@ -25,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- State ---
   let allFiles = [];
-  let itemCache = {}; // ★変更: タイトルとサムネイルの両方をキャッシュ
+  let itemCache = {};
   let isStopRequested = false;
   let activeApiCallCount = 0;
   let savePatternsDebounced;
@@ -33,7 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Initial Setup ---
   loadInitialSettings();
   checkApiKey();
-  savePatternsDebounced = debounce(saveCurrentFilterPatterns, 1000);
+  // ★変更: デバウンス遅延時間を3000msに変更
+  savePatternsDebounced = debounce(saveCurrentFilterPatterns, 3000);
 
   // --- Event Listeners ---
   listFilesBtn.addEventListener('click', handleListFiles);
@@ -47,8 +50,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   folderIdInput.addEventListener('keypress', (e) => e.key === 'Enter' && handleListFiles());
   stopAllBtn.addEventListener('click', handleStopAll);
+  // ★追加: 全サムネイル取得ボタンのイベントリスナー
+  getAllThumbnailsBtn.addEventListener('click', handleGetAllThumbnails);
   
-  // ★変更: イベントデリゲーションをサムネイル取得ボタンにも対応
   fileListBody.addEventListener('click', (event) => {
     const target = event.target.closest('button');
     if (!target) return;
@@ -66,54 +70,52 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Functions ---
   
   /**
-   * ★追加: サムネイルを取得して表示する関数
+   * ★追加: 表示されている全てのサムネイルを一括で取得する
    */
-  function getAndDisplayThumbnail(fileId) {
-    const thumbnailCell = document.querySelector(`tr[data-file-id="${fileId}"] .thumbnail-cell`);
-    if (!thumbnailCell) return;
+  function handleGetAllThumbnails() {
+    const thumbnailBtns = fileListBody.querySelectorAll('.thumbnail-btn');
+    if (thumbnailBtns.length === 0) return;
 
-    thumbnailCell.innerHTML = `<div class="spinner spinner-small"></div>`;
+    this.disabled = true;
+    this.innerHTML = `<span class="material-icons">hourglass_top</span> 取得中...`;
 
-    google.script.run
-      .withSuccessHandler(dataUrl => {
-        if (!itemCache[fileId]) itemCache[fileId] = {};
-        itemCache[fileId].thumbnailDataUrl = dataUrl; // クライアントキャッシュに保存
-        renderThumbnail(thumbnailCell, dataUrl);
-      })
-      .withFailureHandler(err => {
-        console.error('Thumbnail fetch error:', err);
-        renderThumbnail(thumbnailCell, null); // エラー時もプレースホルダー表示
-      })
-      .getThumbnailDataUrl(fileId);
-  }
-
-  /**
-   * ★追加: サムネイルセルの中身を描画するヘルパー関数
-   */
-  function renderThumbnail(cell, dataUrl) {
-    if (dataUrl) {
-      cell.innerHTML = `<img src="${dataUrl}" class="thumbnail-img" alt="サムネイル">`;
-    } else {
-      cell.innerHTML = `<div class="thumbnail-placeholder"><span class="material-icons">image_not_supported</span></div>`;
-    }
+    let i = 0;
+    const processNext = () => {
+      if (i < thumbnailBtns.length) {
+        thumbnailBtns[i].click(); // ボタンのクリックをシミュレートして取得処理を呼び出す
+        i++;
+        setTimeout(processNext, 200); // サーバー負荷軽減のため200msの間隔をあける
+      } else {
+        this.disabled = false;
+        this.innerHTML = `<span class="material-icons">collections</span> 全てのサムネイルを取得`;
+      }
+    };
+    processNext();
   }
 
   function displayFiles(files) {
     fileListBody.innerHTML = '';
     if (files.length === 0) {
       resultsCount.textContent = '対象ファイルが見つかりませんでした。';
+      getAllThumbnailsBtn.classList.add('hidden'); // ★追加: 対象がない場合はボタンを隠す
       return;
     }
     resultsCount.textContent = `${files.length}件の対象ファイルが見つかりました。`;
+    getAllThumbnailsBtn.classList.remove('hidden'); // ★追加: 対象があればボタンを表示
+
     files.forEach(file => {
       const row = document.createElement('tr');
       row.dataset.fileId = file.id;
       row.dataset.fileName = file.name;
 
-      // ★変更: サムネイルセルはまずボタンを表示
-      const thumbnailHtml = `<button class="secondary-btn thumbnail-btn" data-file-id="${file.id}" title="サムネイル取得">
-                               <span class="material-icons">image</span>
-                             </button>`;
+      let thumbnailHtml = '';
+      if (file.thumbnailDataUrl) {
+        thumbnailHtml = `<img src="${file.thumbnailDataUrl}" class="thumbnail-img" alt="サムネイル">`;
+      } else {
+        thumbnailHtml = `<button class="secondary-btn thumbnail-btn" data-file-id="${file.id}" title="サムネイル取得">
+                           <span class="material-icons">image</span>
+                         </button>`;
+      }
 
       row.innerHTML = `
         <td><input type="checkbox" class="file-checkbox" disabled></td>
@@ -128,44 +130,11 @@ document.addEventListener('DOMContentLoaded', () => {
     updateRenameButtonState();
   }
 
-  function getAndDisplayTitle(fileId, ignoreCache = false) {
-    console.log(`[クライアント] getAndDisplayTitle開始: fileId=${fileId}, ignoreCache=${ignoreCache}`);
-    if (isStopRequested) { console.log('[クライアント] 緊急停止中のため処理を中断。'); return; }
-    const row = fileListBody.querySelector(`tr[data-file-id="${fileId}"]`);
-    if (!row) { console.error(`[クライアント] fileId=${fileId} に対応する行が見つかりません。`); return; }
-    
-    // ★変更: キャッシュの参照先を itemCache に変更
-    if (!ignoreCache && itemCache[fileId] && itemCache[fileId].suggestedTitle) {
-      console.log(`[クライアント] キャッシュからタイトルを取得: "${itemCache[fileId].suggestedTitle}"`);
-      updateRowWithSuggestion(row, itemCache[fileId].suggestedTitle);
-      return;
-    }
-
-    renderActionButtons(row, 'loading');
-    activeApiCallCount++;
-    updateStopButtonVisibility();
-    const onComplete = () => { console.log(`[クライアント] API呼び出し完了 (fileId: ${fileId})`); activeApiCallCount--; updateStopButtonVisibility(); };
-    console.log(`[クライアント] google.script.run.getSuggestedTitleを呼び出します... (fileId: ${fileId})`);
-    google.script.run
-      .withSuccessHandler(suggestedTitle => {
-        console.log(`[クライアント] 成功レスポンス受信 (fileId: ${fileId}): "${suggestedTitle}"`);
-        if (isStopRequested) { console.log('[クライアント] 成功しましたが、緊急停止中のためUI更新をスキップ。'); return; }
-        if (!itemCache[fileId]) itemCache[fileId] = {};
-        itemCache[fileId].suggestedTitle = suggestedTitle; // ★変更: キャッシュの保存先
-        updateRowWithSuggestion(row, suggestedTitle);
-        onComplete();
-      })
-      .withFailureHandler(error => {
-        console.error(`[クライアント] エラーレスポンス受信 (fileId: ${fileId}):`, error);
-        if (isStopRequested) { console.log('[クライアント] エラーですが、緊急停止中のためUI更新をスキップ。'); return; }
-        updateRowWithSuggestion(row, `(エラー: ${error.message})`);
-        onComplete();
-      })
-      .getSuggestedTitle(fileId);
-  }
-
   // --- 以下の関数群は前回の回答から変更ありません ---
+  function getAndDisplayThumbnail(fileId) { /* ... */ }
+  function renderThumbnail(cell, dataUrl) { /* ... */ }
   function loadInitialSettings() { /* ... */ }
+  function getAndDisplayTitle(fileId, ignoreCache = false) { /* ... */ }
   function debounce(func, wait) { /* ... */ }
   function saveCurrentFilterPatterns() { /* ... */ }
   function handleListFiles() { /* ... */ }
@@ -187,6 +156,29 @@ document.addEventListener('DOMContentLoaded', () => {
   function escapeHtml(unsafe) { /* ... */ }
 
   // (ここから、省略した関数群をペースト)
+  function getAndDisplayThumbnail(fileId) {
+    const thumbnailCell = document.querySelector(`tr[data-file-id="${fileId}"] .thumbnail-cell`);
+    if (!thumbnailCell) return;
+    thumbnailCell.innerHTML = `<div class="spinner spinner-small"></div>`;
+    google.script.run
+      .withSuccessHandler(dataUrl => {
+        if (!itemCache[fileId]) itemCache[fileId] = {};
+        itemCache[fileId].thumbnailDataUrl = dataUrl;
+        renderThumbnail(thumbnailCell, dataUrl);
+      })
+      .withFailureHandler(err => {
+        console.error('Thumbnail fetch error:', err);
+        renderThumbnail(thumbnailCell, null);
+      })
+      .getThumbnailDataUrl(fileId);
+  }
+  function renderThumbnail(cell, dataUrl) {
+    if (dataUrl) {
+      cell.innerHTML = `<img src="${dataUrl}" class="thumbnail-img" alt="サムネイル">`;
+    } else {
+      cell.innerHTML = `<div class="thumbnail-placeholder"><span class="material-icons">image_not_supported</span></div>`;
+    }
+  }
   function loadInitialSettings() {
     google.script.run.withSuccessHandler(email => { userEmailSpan.textContent = email; }).getUserEmail();
     google.script.run.withSuccessHandler(prefs => {
@@ -198,6 +190,34 @@ document.addEventListener('DOMContentLoaded', () => {
         filterPatternsTextarea.value = defaultPatterns.join('\n');
       }
     }).getUserPreferences();
+  }
+  function getAndDisplayTitle(fileId, ignoreCache = false) {
+    console.log(`[クライアント] getAndDisplayTitle開始: fileId=${fileId}, ignoreCache=${ignoreCache}`);
+    if (isStopRequested) { console.log('[クライアント] 緊急停止中のため処理を中断。'); return; }
+    const row = fileListBody.querySelector(`tr[data-file-id="${fileId}"]`);
+    if (!row) { console.error(`[クライアント] fileId=${fileId} に対応する行が見つかりません。`); return; }
+    if (!ignoreCache && itemCache[fileId] && itemCache[fileId].suggestedTitle) { console.log(`[クライアント] キャッシュからタイトルを取得: "${itemCache[fileId].suggestedTitle}"`); updateRowWithSuggestion(row, itemCache[fileId].suggestedTitle); return; }
+    renderActionButtons(row, 'loading');
+    activeApiCallCount++;
+    updateStopButtonVisibility();
+    const onComplete = () => { console.log(`[クライアント] API呼び出し完了 (fileId: ${fileId})`); activeApiCallCount--; updateStopButtonVisibility(); };
+    console.log(`[クライアント] google.script.run.getSuggestedTitleを呼び出します... (fileId: ${fileId})`);
+    google.script.run
+      .withSuccessHandler(suggestedTitle => {
+        console.log(`[クライアント] 成功レスポンス受信 (fileId: ${fileId}): "${suggestedTitle}"`);
+        if (isStopRequested) { console.log('[クライアント] 成功しましたが、緊急停止中のためUI更新をスキップ。'); return; }
+        if (!itemCache[fileId]) itemCache[fileId] = {};
+        itemCache[fileId].suggestedTitle = suggestedTitle;
+        updateRowWithSuggestion(row, suggestedTitle);
+        onComplete();
+      })
+      .withFailureHandler(error => {
+        console.error(`[クライアント] エラーレスポンス受信 (fileId: ${fileId}):`, error);
+        if (isStopRequested) { console.log('[クライアント] エラーですが、緊急停止中のためUI更新をスキップ。'); return; }
+        updateRowWithSuggestion(row, `(エラー: ${error.message})`);
+        onComplete();
+      })
+      .getSuggestedTitle(fileId);
   }
   function debounce(func, wait) { let timeout; return function(...args) { const context = this; clearTimeout(timeout); timeout = setTimeout(() => func.apply(context, args), wait); }; }
   function saveCurrentFilterPatterns() { const patterns = filterPatternsTextarea.value; google.script.run.saveFilterPatternsOnly(patterns); }
