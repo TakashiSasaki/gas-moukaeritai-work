@@ -1,14 +1,19 @@
 {
-  "name": "rename-file-gemini",
+  "name": "rename-by-gemini",
   "id": "1eemaTl1sGS9LyDLY4MyflHQdcEDwMp-JNXz6bABf1cY-CPcc4wKocROt",
   "url": "https://script.google.com/d/1eemaTl1sGS9LyDLY4MyflHQdcEDwMp-JNXz6bABf1cY-CPcc4wKocROt/edit?usp=drivesdk",
-  "lastUpdated": "2025-08-03T23:50:19.988Z",
+  "lastUpdated": "2025-08-04T02:54:45.668Z",
   "application.json": null,
   "deployments.json": [
     {
       "id": "AKfycbzk-b9_B2Bhmmi-rbASJOCXDwC7BfciXmmb1vTHXFcR",
       "target": "HEAD",
       "description": ""
+    },
+    {
+      "id": "AKfycbzwaNYlDJ8ewKBKvLRzgnCjRc95u1Yh8X6WXGfZImkhUxMxJO8QAuEr1Hrx807se6BT",
+      "target": "2",
+      "description": "公開 v2"
     }
   ]
 }
