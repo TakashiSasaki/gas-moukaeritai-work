@@ -1,5 +1,11 @@
 [
   {
+    "name": "read-only-datastore-admin",
+    "id": "1i84akpunM6Pkgsi2VV7JP5CztrpsMCag0UFprLBIQ14ZgveHyC2ndDQx",
+    "url": "https://script.google.com/d/1i84akpunM6Pkgsi2VV7JP5CztrpsMCag0UFprLBIQ14ZgveHyC2ndDQx/edit?usp=drivesdk",
+    "lastUpdated": "2025-08-26T00:16:00.875Z"
+  },
+  {
     "name": "rename-by-gemini",
     "id": "1eemaTl1sGS9LyDLY4MyflHQdcEDwMp-JNXz6bABf1cY-CPcc4wKocROt",
     "url": "https://script.google.com/d/1eemaTl1sGS9LyDLY4MyflHQdcEDwMp-JNXz6bABf1cY-CPcc4wKocROt/edit?usp=drivesdk",
