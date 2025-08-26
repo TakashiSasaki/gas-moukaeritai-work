@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <title>スプレッドシート一覧</title>
+    <style>
+      <?!= HtmlService.createHtmlOutputFromFile('stylesheet').getContent(); ?>
+    </style>
+  </head>
+  <body>
+    <h1>/gas/ ディレクトリ内のスプレッドシート一覧</h1>
+
+    <? if (spreadsheetList.length > 0) { ?>
+      <ul>
+        <? for (var i = 0; i < spreadsheetList.length; i++) { ?>
+          <li>
+            <a href="<?= spreadsheetList[i].url ?>" target="_blank" rel="noopener noreferrer">
+              <?= spreadsheetList[i].name ?>
+            </a>
+          </li>
+        <? } ?>
+      </ul>
+    <? } else { ?>
+      <p>/gas/ ディレクトリにスプレッドシートが見つかりませんでした。</p>
+    <? } ?>
+
+    <script>
+      <?!= HtmlService.createHtmlOutputFromFile('script').getContent(); ?>
+    </script>
+  </body>
+</html>
