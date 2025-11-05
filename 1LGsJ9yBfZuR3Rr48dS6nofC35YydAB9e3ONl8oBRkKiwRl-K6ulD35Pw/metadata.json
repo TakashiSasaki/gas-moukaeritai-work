@@ -2,7 +2,23 @@
   "name": "Markdown converter",
   "id": "1LGsJ9yBfZuR3Rr48dS6nofC35YydAB9e3ONl8oBRkKiwRl-K6ulD35Pw",
   "url": "https://script.google.com/d/1LGsJ9yBfZuR3Rr48dS6nofC35YydAB9e3ONl8oBRkKiwRl-K6ulD35Pw/edit?usp=drivesdk",
-  "lastUpdated": "2025-11-05T03:59:22.484Z",
+  "lastUpdated": "2025-11-05T04:00:43.297Z",
   "application.json": null,
-  "deployments.json": null
+  "deployments.json": [
+    {
+      "id": "AKfycbwoigbx3IcvzfqH8alGjF7WZspQpC9Ezj5xeoYQ9wFq",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbwQE7bnBUGwAkF0XypkYS8mpKtEsa2O8Cr2qAl5gGdKxv9DZFIQOx7ufaLo922AbShOgw",
+      "target": "1",
+      "description": "Published Version"
+    },
+    {
+      "id": "AKfycbxI2WRRCOI_Q8dJeJFUeWpReXlPBe4aw4ks9XgSL1BLghYaYXvf7P-0uivPhqB3ljyi",
+      "target": "3",
+      "description": ""
+    }
+  ]
 }
