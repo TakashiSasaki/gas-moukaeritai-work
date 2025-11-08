@@ -1,1 +1,5 @@
-No deployed versions of script.
+Found 4 versions.
+1 - ライブラリとして公開（自分向け）
+2 - ライブラリ公開版
+3 - ウェブアプリ公開版
+4 - 公開版

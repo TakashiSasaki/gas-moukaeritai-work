@@ -1,1 +1,18 @@
-[]
+[
+  {
+    "version": 1,
+    "description": "ライブラリとして公開（自分向け）"
+  },
+  {
+    "version": 2,
+    "description": "ライブラリ公開版"
+  },
+  {
+    "version": 3,
+    "description": "ウェブアプリ公開版"
+  },
+  {
+    "version": 4,
+    "description": "公開版"
+  }
+]
