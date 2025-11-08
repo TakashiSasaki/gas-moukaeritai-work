@@ -130,7 +130,7 @@
       color: white;
       font-size: 0.8em;
       font-weight: bold;
-      transition: width 0.4s ease;
+      transition: width 0.4s ease, background-color 0.4s ease;
     }
   </style>
 </head>
@@ -213,7 +213,7 @@
     function startProcess() {
       setButtonLoading(true, "処理準備中...");
       updateStatus("処理の準備を開始しました...", "processing");
-      hideProgress(); // プログレスバーを隠す
+      hideProgress(); // プログレスバーをリセット
 
       google.script.run
         .withSuccessHandler(handleProcessResponse)
@@ -231,21 +231,24 @@
       }
 
       updateStatus(response.message, response.status);
-      updateProgress(response.processedCount || 0, response.totalFiles || 0);
+      
+      // v3 では totalFiles が不明なため、processedCount のみで進捗を表示
+      updateProgress(response.metaData.processedCount, -1); // totalFiles = -1
 
       if (response.status === "processing") {
-        setButtonLoading(true, `処理中... (${response.processedCount || 0}/${response.totalFiles || '?'})`);
+        setButtonLoading(true, `処理中... (${response.metaData.processedCount} 件完了)`);
         
         // 次のページの処理をリクエスト
         google.script.run
           .withSuccessHandler(handleProcessResponse)
           .withFailureHandler(handleError)
-          .processNextPage(response.metaDataKey);
+          .processNextPage(response.metaData); // metaData をそのまま渡す
       
       } else if (response.status === "success") {
         // 処理完了
         setButtonLoading(false);
-        updateProgress(response.processedCount, response.totalFiles); // 100%にする
+        // 完了ステータスを渡す (-2: 1件以上完了, 0: 0件完了)
+        updateProgress(response.metaData.processedCount, response.metaData.processedCount > 0 ? -2 : 0);
         // スプレッドシート情報を更新
         google.script.run.withSuccessHandler(displaySpreadsheetInfo).getSpreadsheetInfo();
       }
@@ -258,7 +261,7 @@
       const errorMessage = (error && error.message) ? error.message : "不明なエラーが発生しました。";
       updateStatus(`エラー: ${errorMessage}`, "error");
       setButtonLoading(false);
-      hideProgress();
+      hideProgress(true); // エラー時はプログレスバーをリセット
     }
 
     /**
@@ -285,28 +288,53 @@
 
     /**
      * プログレスバーの表示を更新
+     * @param {number} processed 処理済み件数
+     * @param {number} total 総数 (-1: V3処理中, -2: V3 1件以上完了, 0: V3 0件完了)
      */
     function updateProgress(processed, total) {
-      if (total > 0) {
+      progressBarContainer.style.display = 'block';
+
+      if (total === -1) {
+        // Drive API v3 モード (処理中)
+        progressBar.style.width = '100%';
+        progressBar.textContent = `${processed} 件書き込み完了...`;
+        progressBar.style.backgroundColor = '#5bc0de'; // 水色 (処理中)
+      } else if (total === -2) {
+        // Drive API v3 モード (1件以上完了)
+        progressBar.style.width = '100%';
+        progressBar.textContent = `完了 (${processed} 件)`;
+        progressBar.style.backgroundColor = '#5cb85c'; // 緑色 (成功)
+      } else if (total === 0 && processed === 0) {
+        // 対象ファイル 0 件の場合 (total = 0)
+        progressBar.style.width = '100%';
+        progressBar.textContent = `完了 (0 件)`;
+        progressBar.style.backgroundColor = '#5cb85c'; // 緑色 (成功)
+      } else if (total > 0) {
+        // (旧ロジック: v2 用 - v3 では通常通らない)
         const percent = Math.round((processed / total) * 100);
         progressBar.style.width = percent + '%';
         progressBar.textContent = `${percent}% (${processed}/${total})`;
-        progressBarContainer.style.display = 'block';
-      } else if (total === 0 && processed === 0) {
-        // 対象ファイル 0 件の場合
-        progressBar.style.width = '100%';
-        progressBar.textContent = `完了 (0/0 件)`;
-        progressBarContainer.style.display = 'block';
+        progressBar.style.backgroundColor = '#3498db'; // 青色 (デフォルト)
       }
     }
 
     /**
-     * プログレスバーを非表示
+     * プログレスバーを非表示/リセット
+     * @param {boolean} [isError=false] エラーによるリセットか
      */
-    function hideProgress() {
-      progressBarContainer.style.display = 'none';
-      progressBar.style.width = '0%';
-      progressBar.textContent = '0%';
+    function hideProgress(isError = false) {
+      if (isError) {
+        progressBarContainer.style.display = 'block';
+        progressBar.style.width = '100%';
+        progressBar.textContent = 'エラー';
+        progressBar.style.backgroundColor = '#d9534f'; // 赤色 (エラー)
+      } else {
+        // 実行開始時に呼ばれる場合
+        progressBarContainer.style.display = 'none';
+        progressBar.style.width = '0%';
+        progressBar.textContent = '0%';
+        progressBar.style.backgroundColor = '#3498db'; // 青色 (デフォルト)
+      }
     }
 
     /**
@@ -320,10 +348,6 @@
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
     }
-
   </script>
 </body>
 </html>
-
-
-
