@@ -1,7 +1,11 @@
-function getDeploymentId() {
-    return [ScriptApp.getScriptId() , ScriptApp.getService().getUrl()];
+function getDeploymentUrl() {
+    return ScriptApp.getService().getUrl();
 }
 
-function testGetDeploymentId(){
-  Logger.log(getDeploymentId());
+function getScriptId(){
+  return ScriptApp.getScriptId();
+}
+
+function getDeploymentId(){
+  //to be implemented
 }
