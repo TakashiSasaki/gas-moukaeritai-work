@@ -1,0 +1,19 @@
+{
+  "name": "Untitled project",
+  "id": "1T231UlZPgKgysL27aTsmZ9jNNfyyhD8vwjwaXafCVfoDw5lPspuHdE54",
+  "url": "https://script.google.com/d/1T231UlZPgKgysL27aTsmZ9jNNfyyhD8vwjwaXafCVfoDw5lPspuHdE54/edit?usp=drivesdk",
+  "lastUpdated": "2025-11-08T16:50:44.030Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbxVLc_Z3Frvgvx8xozPZ7ntXPx05lJMvegJ9sE4HhVq",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbzzUFRxBjCOm7FFcOqC6KVd5n94r_5_PPwVn6WKd4lDkZRVQcAAfyk9hF7vnGFB2qtpOw",
+      "target": "3",
+      "description": "公開版"
+    }
+  ]
+}
