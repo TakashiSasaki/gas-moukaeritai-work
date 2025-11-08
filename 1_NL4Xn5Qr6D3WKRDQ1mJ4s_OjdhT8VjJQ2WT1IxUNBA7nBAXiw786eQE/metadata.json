@@ -2,13 +2,18 @@
   "name": "タイトル文字列の適切さ判定",
   "id": "1_NL4Xn5Qr6D3WKRDQ1mJ4s_OjdhT8VjJQ2WT1IxUNBA7nBAXiw786eQE",
   "url": "https://script.google.com/d/1_NL4Xn5Qr6D3WKRDQ1mJ4s_OjdhT8VjJQ2WT1IxUNBA7nBAXiw786eQE/edit?usp=drivesdk",
-  "lastUpdated": "2025-11-08T04:20:36.663Z",
+  "lastUpdated": "2025-11-08T06:35:32.850Z",
   "application.json": null,
   "deployments.json": [
     {
       "id": "AKfycbylTq_XELNdMKE1V6_Spw3cgMzE5Nbjo5FGcIimVCmn",
       "target": "HEAD",
       "description": ""
+    },
+    {
+      "id": "AKfycbxcHPhXXthQRNGuqD1P-E_SKg0y6Q8CBiMR48Xwin_l1C06yG29YDGwiK62_20SXX1h",
+      "target": "4",
+      "description": "公開版"
     }
   ]
 }
