@@ -88,8 +88,39 @@
                         document.getElementById('markdown-content').innerHTML = '<p class="text-center text-danger">Could not load the requested page.</p>';
                     });
             } else {
-                // You can load a default page here if you want
-                document.getElementById('markdown-content').innerHTML = '<p class="text-center">Please specify a page to load.</p>';
+                document.getElementById('markdown-content').innerHTML = `
+                    <section class="text-center mb-5">
+                        <h2 class="section-title">主な機能</h2>
+                        <p class="lead text-muted">GASプロジェクトの管理をシンプルに、そしてパワフルに。</p>
+                    </section>
+
+                    <div class="row text-center">
+                        <div class="col-lg-4 mb-4">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-body p-5">
+                                    <h5 class="card-title fw-bold mb-3">プロジェクトの自動検出</h5>
+                                    <p class="card-text">Google Drive内のスタンドアロンスクリプトを自動で探し出し、ダッシュボードに一覧表示します。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 mb-4">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-body p-5">
+                                    <h5 class="card-title fw-bold mb-3">クイックアクセス</h5>
+                                    <p class="card-text">プロジェクト名や最終更新日でソート・フィルタリング。目的のスクリプトに素早くたどり着けます。</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 mb-4">
+                            <div class="card h-100 shadow-sm">
+                                <div class="card-body p-5">
+                                    <h5 class="card-title fw-bold mb-3">コードの直接編集</h5>
+                                    <p class="card-text">一覧から直接claspでコードをpull & push。もうスクリプトエディタを探し回る必要はありません。</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
             }
         });
     </script>
