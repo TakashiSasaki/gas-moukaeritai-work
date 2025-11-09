@@ -1,1 +1,4 @@
 __pycache__/
+.gemini_tmp/analyze_script_ids.py
+.gemini_tmp/script_id_analysis.json
+.gemini_tmp/commit_message.txt
