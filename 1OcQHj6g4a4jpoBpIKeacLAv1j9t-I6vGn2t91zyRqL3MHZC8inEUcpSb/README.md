@@ -172,5 +172,5 @@ The project has the following deployments:
 
 *   **Deployment ID:** `AKfycbww8l73UVR8Xb_W1-GArwpPVcVoflk0vEthE0kdE4uPVcxDuOC-gLHhYKOrDHXHwWKT9Q`
     *   **Target Version:** `2`
-    *   **Description**: `ライブラリとして使えるレベルになった` (Became usable as a library)
-    *   **Published URL**: [Link](https://script.google.com/macros/s/AKfycbww8l73UVR8Xb_W1-GArwpPVcVoflk0vEthE0kdE4uPVcxDuOC-gLHhYKOrDHXHwWKT9Q/exec)
+    *   **Description:** `ライブラリとして使えるレベルになった` (Became usable as a library)
+    *   **Published URL:** `https://script.google.com/macros/s/AKfycbww8l73UVR8Xb_W1-GArwpPVcVoflk0vEthE0kdE4uPVcxDuOC-gLHhYKOrDHXHwWKT9Q/exec`
