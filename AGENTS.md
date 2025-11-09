@@ -12,6 +12,13 @@ This repository is intended to gather all my Google Apps Script project files.
 7.  **README.md:** The main `README.md` at the root of the repository provides general information about the project. Keep it updated if significant changes occur.
 8. Use temporary file such as commit_message.txt for detailed commit message.
 
+## Repository Directory Structure Overview:
+
+-   **Root Directory (`/`):** Contains core configuration files (`.gitignore`, `clasp-list.json`, `clasp-list.txt`), Python utility scripts (`clasp-pull.py`, `create_missing_scriptid_dirs.py`, etc.), and the main `README.md`.
+-   **Project Directories (`/{SCRIPT_ID}/`):** Each subdirectory named after a Google Apps Script project's Script ID. These contain the project's source files (e.g., `Code.js`, `appsscript.json`, `index.html`, `deployments.json`, `README.md`).
+-   **Documentation Directory (`/docs/`):** Contains markdown files (`.md`) for project documentation, named after their Script IDs (e.g., `docs/1_SuiFIOR_EKToX4e2h8Jp3IEi8iSlJBnH24i2zQZSq2ETXDRTHXsQps3.md`). Also includes `index.html` (the public website entry point) and `readmes.html` (an index for project READMEs).
+-   **Hidden Directories (`/.git/`, `/.github/`, `/.gemini/`, `/.gemini_tmp/`):** Standard version control, CI/CD, and agent-specific temporary directories.
+
 ## Specific Tasks for Agents:
 
 ### Task 1: Syncing Projects
