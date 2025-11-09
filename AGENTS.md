@@ -28,6 +28,18 @@ This repository is intended to gather all my Google Apps Script project files.
 - **Creation:** If a new project needs to be added, the user will provide the Script ID. Create a new directory with this ID and initialize it with `clasp create --type standalone --scriptId <SCRIPT_ID>`.
 - **Deletion:** If a project needs to be removed, delete its directory and ensure it's removed from any relevant lists (e.g., `clasp-list.json` if it were manually managed, but it's not, so just the directory).
 
+### Task 4: Creating Project Documentation
+- When asked to create a documentation file for a Google Apps Script project:
+    - **File Name:** The markdown file name must be the Script ID of the project (e.g., `1_SuiFIOR_EKToX4e2h8Jp3IEi8iSlJBnH24i2zQZSq2ETXDRTHXsQps3.md`).
+    - **Location:** The file must be saved in the `docs/` directory.
+    - **Content:** The markdown file should provide a comprehensive explanation of the project, including:
+        - A project overview and its purpose.
+        - A description of its core functionality, with relevant code snippets from the `.js` files.
+        - Details about the web interface from the `.html` files, if applicable.
+        - A "Permissions" section explaining who can access the app and how it executes, based on the `webapp.access` and `webapp.executeAs` properties in `appsscript.json`.
+        - A "Configuration" section detailing any necessary setup, such as required API keys in `PropertiesService`.
+        - A "Deployments" section listing all deployments from `deployments.json`. Each deployment should include its ID, target version, description, and a clickable published URL in the format `https://script.google.com/macros/s/{deploymentId}/exec`.
+
 ## Important Considerations:
 - **Error Handling:** Be robust in handling errors, especially during `clasp` operations.
 - **User Confirmation:** For destructive actions (e.g., deleting projects, pushing major changes), always ask for user confirmation.
