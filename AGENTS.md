@@ -16,7 +16,12 @@ This repository is intended to gather all my Google Apps Script project files.
 
 -   **Root Directory (`/`):** Contains core configuration files (`.gitignore`, `clasp-list.json`, `clasp-list.txt`), Python utility scripts (`clasp-pull.py`, `create_missing_scriptid_dirs.py`, etc.), and the main `README.md`.
 -   **Project Directories (`/{SCRIPT_ID}/`):** Each subdirectory named after a Google Apps Script project's Script ID. These contain the project's source files (e.g., `Code.js`, `appsscript.json`, `index.html`, `deployments.json`, `README.md`).
--   **Documentation Directory (`/docs/`):** Contains markdown files (`.md`) for project documentation, named after their Script IDs (e.g., `docs/1_SuiFIOR_EKToX4e2h8Jp3IEi8iSlJBnH24i2zQZSq2ETXDRTHXsQps3.md`). Also includes `index.html` (the public website entry point) and `readmes.html` (an index for project READMEs).
+-   **Documentation Directory (`/docs/`):** This directory serves as the root for the public website.
+    -   `docs/index.html`: The main entry point for the public website, providing an overview and navigation.
+    -   `docs/readmes.html`: An HTML page that lists all project READMEs (copied as `.md` files) and provides a client-side Markdown rendering feature to view them.
+    -   `docs/readmes/{SCRIPT_ID}.md`: Contains copies of the `README.md` files from each Google Apps Script project, named after their respective Script IDs. These are used for documentation on the public website.
+    -   `docs/CNAME`: Configuration file for custom domain mapping (e.g., `gas.moukaeritai.work`) for GitHub Pages.
+    -   `docs/style.css`: Contains custom CSS styles for the public website.
 -   **Hidden Directories (`/.git/`, `/.github/`, `/.gemini/`, `/.gemini_tmp/`):** Standard version control, CI/CD, and agent-specific temporary directories.
 
 ## Specific Tasks for Agents:
