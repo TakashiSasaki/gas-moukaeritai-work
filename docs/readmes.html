@@ -19,6 +19,20 @@
         pre { background-color: #eee; padding: 10px; border-radius: 5px; overflow-x: auto; }
         code { font-family: monospace; }
 
+        /* Button styling */
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+
         /* New styles for toggling content pane */
         body.content-hidden #sidebar {
             width: 100%;
@@ -42,6 +56,39 @@
         body.content-hidden #toggle-content {
             display: none; /* Hide sidebar toggle when content is hidden */
         }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            #sidebar {
+                width: 100%; /* Full width on small screens */
+                position: absolute;
+                left: -100%; /* Hide sidebar off-screen */
+                z-index: 101;
+                transition: left 0.3s ease;
+            }
+            body.content-hidden #sidebar {
+                width: 100%; /* Still 100% when content is hidden */
+                left: 0; /* Show sidebar */
+            }
+            body:not(.content-hidden) #sidebar {
+                left: 0; /* Show sidebar when content is not hidden */
+            }
+            body:not(.content-hidden) #content {
+                margin-left: 100%; /* Push content off-screen when sidebar is open */
+            }
+            #hamburger-menu {
+                display: block; /* Always show hamburger on small screens */
+            }
+            body:not(.content-hidden) #hamburger-menu {
+                display: none; /* Hide hamburger when content is visible */
+            }
+            #toggle-content {
+                display: block; /* Always show sidebar toggle on small screens */
+            }
+            body.content-hidden #toggle-content {
+                display: none; /* Hide sidebar toggle when content is hidden */
+            }
+        }
     </style>
 </head>
 <body>
@@ -53,7 +100,7 @@
         </ul>
     </div>
     <div id="content">
-        <button id="hamburger-menu">☰ Show Sidebar</button>
+        <button id="hamburger-menu">☰</button>
         <h2 id="readme-title">Select a README to view</h2>
         <div id="readme-display">
             <!-- Rendered markdown will appear here -->
