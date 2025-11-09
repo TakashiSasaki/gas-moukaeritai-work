@@ -66,7 +66,7 @@ function hexBytes(bytes) {
 
 ## Permissions & Libraries
 
-The `appsscript.json` file specifies that the web app is accessible to anyone, including anonymous users. It also lists two library dependencies: `Assert` and `Is`.
+The `appsscript.json` file indicates that the web app is accessible to anyone, including anonymous users. It also lists two library dependencies: `Assert` and `Is`.
 
 ```json
 {

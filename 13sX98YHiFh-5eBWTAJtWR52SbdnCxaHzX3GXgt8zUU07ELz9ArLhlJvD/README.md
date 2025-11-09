@@ -1,0 +1,3 @@
+# Str
+
+This project's documentation can be found [here](../../docs/13sX98YHiFh-5eBWTAJtWR52SbdnCxaHzX3GXgt8zUU07ELz9ArLhlJvD.md).
