@@ -1,102 +1,131 @@
-# Google Apps Script Project: 1Uf0YpVntqswRo0bwSXCBA7glomAfrNz43dxiJziapYeXIy90b_EHpt3_
+# Project: Markdown2Docs with Gemini AI
 
-## Project Overview
-This Google Apps Script project, named "Markdown2Docs", is a web application designed to streamline the process of converting Markdown text into formatted Google Documents. It offers a live preview of the Markdown content, the ability to automatically generate document titles using the Gemini API, and functionality to save the converted content as a new Google Document.
+This Google Apps Script project is a feature-rich web application designed to convert Markdown text into formatted Google Documents. It offers a live preview of the Markdown content, leverages the Google Gemini API for AI-powered document title generation, and provides functionality to save the converted content as a new Google Document.
+
+## Overview
+
+The primary purpose of this project is to streamline the process of creating professional-looking Google Documents from Markdown. It combines the simplicity of Markdown with the advanced capabilities of Google Docs formatting and AI assistance, making it an efficient tool for content creators.
 
 ## Functionality
 
-### `Code.gs.js`
-This file contains the primary server-side functions for the web application.
--   **`doGet()`**: Serves the `index.html` file as a web application. It sets the page title to "Markdown2Docs", allows embedding in iframes (`ALLOWALL`), and configures the sandbox mode to `NATIVE`.
--   **`convertMarkdownAndCreateDoc(markdown, title)`**: Receives Markdown text and a desired document title. It creates a new Google Document with the given title, converts the Markdown content into the document using `convertMarkdownToGoogleDocExtended`, and returns the URL of the newly created document.
+The core functionality is implemented across `Code.gs.js`, `Markdown.js`, `callGeminiAPI.js`, `generateTitleFromMarkdown.js`, `getAppUrl.js`, and the web interface (`index.html`).
 
-### `Markdown.js`
-This file is responsible for the core Markdown parsing and conversion logic to Google Document format.
--   **`convertMarkdownToGoogleDocExtended(markdown, doc)`**: Takes Markdown text and a Google Document object. It processes the Markdown line by line, converting various elements into Google Document formatting:
-    -   **Headings**: Lines starting with `#` are converted to corresponding Google Document heading styles (HEADING1 to HEADING6).
-    -   **Code Blocks**: Text enclosed in triple backticks (```` ``` ````) is formatted as code with "Courier New" font.
-    -   **Display Math**: Lines starting and ending with `$$` are converted to Google Document equations.
-    -   **Lists**: Both numbered (`1. `) and unordered (`- ` or `* `) lists are converted to Google Document list items with appropriate glyph types.
-    -   **Inline Formatting**: Helper functions `processListItem` and `processInlineFormatting` are used to apply inline styles such as bold (`**text**`), italic (`*text*`), inline code (`` `code` ``), and links (`[text](url)`). Inline math (`$math$`) is also handled.
+### Core Features
 
-### `callGeminiAPI.js`
-This script handles communication with the Gemini API.
--   **`callGeminiAPI(payload)`**: Sends a POST request to the Gemini API's `generateContent` endpoint. It retrieves the API key from `PropertiesService.getScriptProperties()` and uses a specified `MODEL_ID` (e.g., `gemma-3-27b-it`). It logs the API response.
--   **`testGetTitle()`**: A test function that demonstrates calling the Gemini API to generate a title from a sample text.
+-   **`doGet()`**: (in `Code.gs.js`) Serves as the entry point for the web application, rendering the `index.html` file. It sets the page title to "Markdown2Docs" and configures the sandbox mode and viewport.
+-   **`convertMarkdownAndCreateDoc(markdown, title)`**: (in `Code.gs.js`) Receives Markdown text and a desired document title from the web interface. It creates a new Google Document with the given title and populates it with the converted Markdown content using `convertMarkdownToGoogleDocExtended()`. It then returns the URL of the newly created document.
+-   **`convertMarkdownToGoogleDocExtended(markdown, doc)`**: (in `Markdown.js`) This function is responsible for parsing the Markdown text and applying corresponding formatting to a Google Document object. It supports:
+    -   Headings (H1-H6)
+    -   Code Blocks (delimited by ```)
+    -   Display Math (delimited by `$$`)
+    -   Numbered and Unordered Lists
+    -   Inline Formatting (bold, italic, inline code, links)
+    -   Inline Math (delimited by `$`)
+-   **`callGeminiAPI(payload)`**: (in `callGeminiAPI.js`) A generic function to send POST requests to the Google Gemini API (defaulting to `gemma-3-27b-it`). It handles API key authentication and logs the API response.
+-   **`generateTitleFromMarkdown(markdown)`**: (in `generateTitleFromMarkdown.js`) Uses the Gemini API to generate a concise and descriptive title from the provided Markdown content. It constructs a specific prompt, calls `callGeminiAPI()`, and extracts the title from the JSON response. It also includes `extractJsonString()` to robustly parse JSON from the API response.
+-   **`getAppUrl()`**: (in `getAppUrl.js`) Returns the published URL of the current web application.
 
-### `generateTitleFromMarkdown.js`
-This file provides functionality to generate titles for Markdown content using AI.
--   **`generateTitleFromMarkdown(markdown)`**: Takes Markdown text, constructs a prompt for the Gemini API to generate a concise title, and calls `callGeminiAPI`. It then parses the API response to extract the generated title. Includes robust JSON extraction using `extractJsonString`.
--   **`extractJsonString(text)`**: A helper function to extract a valid JSON string from a larger text, useful for parsing AI model responses.
--   **`testGenerateTitleFromMarkdown()`**: A test function to verify the title generation process with sample Markdown.
+### Code Examples
 
-### `getAppUrl.js`
--   **`getAppUrl()`**: Returns the published URL of the current web application.
+#### `Code.gs.js`
+
+```javascript
+/**
+ * File: Code.gs
+ * Description: Backend script for Markdown2Docs web app.
+ */
+
+/**
+ * Serves the HTML page to the client.
+ */
+
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('index')
+    .setTitle('Markdown2Docs')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .setSandboxMode(HtmlService.SandboxMode.NATIVE)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+
+/**
+ * Receives markdown text and a document title from the web form, creates a new document,
+ * converts Markdown content, and returns the document URL.
+ */
+function convertMarkdownAndCreateDoc(markdown, title) {
+  var doc = DocumentApp.create(title);
+  convertMarkdownToGoogleDocExtended(markdown, doc);
+  return doc.getUrl();
+}
+```
+
+#### `Markdown.js` (Excerpt)
+
+```javascript
+/**
+ * Converts Markdown text to a formatted Google Document using the provided document.
+ * @param {string} markdown - The Markdown text to be converted.
+ * @param {Document} doc - The Google Document object to which the parsed content will be appended.
+ */
+function convertMarkdownToGoogleDocExtended(markdown, doc) {
+  var body = doc.getBody();
+  // ... (Markdown parsing and Google Docs formatting logic) ...
+}
+```
+
+#### `generateTitleFromMarkdown.js` (Excerpt)
+
+```javascript
+/**
+ * Filename: generateTitleFromMarkdown.gs
+ * 
+ * Generates a concise title from the Markdown content using Gemma 3 27B (Gemini API).
+ *
+ * @param {string} markdown - The Markdown text from which to generate a title.
+ * @return {string} - The generated title.
+ */
+function generateTitleFromMarkdown(markdown) {
+  const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  const modelId = 'gemma-3-27b-it';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
+
+  // Prepare the prompt by separating the instruction from the content clearly.
+  const prompt = `Please read the following Markdown content and generate a concise and descriptive title that accurately reflects its content. ` + 
+                 `Output a plain text JSON object only in the format {"title":"..."}.\n\nContent:\n${markdown}`;
+
+  // ... (API call and response parsing logic) ...
+}
+```
 
 ## Web Interface (`index.html`)
-The `index.html` file provides the user-facing interface for the Markdown2Docs application.
--   **Markdown Input**: A `textarea` (`id="markdownInput"`) for users to paste or type their Markdown content.
--   **Title Input**: An `input` field (`id="docTitle"`) for the document title, which can be manually entered or automatically generated.
--   **Action Buttons**:
-    -   **"Paste Markdown Text"**: Uses the Clipboard API to paste content into the Markdown input.
-    -   **"Regenerate Title"**: Triggers the `generateTitleFromMarkdown` function to create a title based on the current Markdown.
-    -   **"Save as New Document"**: Calls `convertMarkdownAndCreateDoc` to create a Google Document from the Markdown.
--   **Live Preview**: A `div` (`id="preview"`) that dynamically renders the Markdown content as HTML, including support for MathJax to display mathematical expressions.
--   **Document Link Display**: A `div` (`id="docLink"`) to show the URL of the newly created Google Document.
+
+The `index.html` file provides a rich and interactive user interface:
+
+-   **Markdown Input**: A `textarea` for users to paste or type their Markdown content. A "Paste Markdown Text" button uses the Clipboard API for convenience.
+-   **Title Management**: An input field for the document title. A "Regenerate Title" button triggers AI-powered title generation using Gemini. The title is also auto-generated if left blank when saving.
+-   **"Save as New Document" Button**: Calls the server-side `convertMarkdownAndCreateDoc()` function to create a Google Document.
+-   **Live Preview**: A dedicated `div` (`#preview`) that dynamically renders the Markdown content as HTML, including support for MathJax to display mathematical expressions.
+-   **Document Link Display**: A `div` (`#docLink`) to show the URL of the newly created Google Document.
 -   **QR Code**: Displays a QR code for the web app's URL, generated using `QRCode.js`.
--   **Client-side Logic**: JavaScript handles user interactions, live preview updates, calls to server-side functions via `google.script.run`, and integration with MathJax and QRCode.js.
--   **External Libraries**: Integrates MathJax for mathematical typesetting and QRCode.js for QR code generation.
--   **Styling**: Includes inline CSS for layout and appearance.
+-   **Client-side Scripting**: Extensive JavaScript handles user interactions, live preview updates, calls to server-side functions via `google.script.run`, and integrates external libraries like MathJax and QRCode.js.
 
 ## Permissions
-The `appsscript.json` manifest specifies the following web app execution permissions:
--   `webapp.access`: `ANYONE` - This means the web application can be accessed by anyone, including anonymous users.
--   `webapp.executeAs`: `USER_ACCESSING` - The script will execute with the identity and permissions of the user who is currently accessing the web app.
 
-The project requires the following OAuth scopes:
--   `https://www.googleapis.com/auth/script.external_request`: For making external HTTP requests (e.g., to the Gemini API).
--   `https://www.googleapis.com/auth/script.scriptapp`: For interacting with the script itself (e.g., getting the web app URL).
--   `https://www.googleapis.com/auth/cloud-platform`: Likely for broader access to Google Cloud services, potentially related to Gemini API.
--   `https://www.googleapis.com/auth/documents`: For creating and modifying Google Documents.
+The `appsscript.json` file specifies the following permissions:
+
+-   **Execution**: `USER_ACCESSING` (the script runs with the identity and permissions of the user who is currently accessing the web app).
+-   **Access**: `ANYONE` (the web app is accessible by anyone, including anonymous users).
+-   **OAuth Scopes**:
+    -   `https://www.googleapis.com/auth/script.external_request`: For making external HTTP requests (e.g., to the Gemini API).
+    -   `https://www.googleapis.com/auth/script.scriptapp`: For interacting with the script itself (e.g., getting the web app URL).
+    -   `https://www.googleapis.com/auth/cloud-platform`: Likely for broader access to Google Cloud services, potentially related to Gemini API.
+    -   `https://www.googleapis.com/auth/documents`: For creating and modifying Google Documents.
 
 ## Configuration
-This project relies on `PropertiesService.getScriptProperties()` to store the `GEMINI_API_KEY`, which is essential for the title generation functionality.
+
+-   **Time Zone**: The project is configured for the `Asia/Tokyo` time zone.
+-   **`GEMINI_API_KEY`**: A Google Gemini API key must be set as a script property (`PropertiesService.getScriptProperties()`) for the AI features (title generation) to function.
 
 ## Deployments
-The project has multiple deployments, indicating different versions or stages of the application:
 
-1.  **Deployment 1 (HEAD)**:
-    -   **ID**: `AKfycbxd8lYaATVxcLQ2oQYs_37eyiv2bdRI1fE5TIw7Qa4`
-    -   **Target**: `HEAD` (Points to the latest saved version of the script).
-    -   **Description**: (No specific description provided).
-    -   **Published URL**: `https://script.google.com/macros/s/AKfycbxd8lYaATVxcLQ2oQYs_37eyiv2bdRI1fE5TIw7Qa4/exec`
-
-2.  **Deployment 2 (Version 4)**:
-    -   **ID**: `AKfycbxkVNMd-fLAOo6nA9j9vhYs2PUvFRKKkEafnaHGZ9QBv6uzTHv9w0s2CuFdHSRJjb2L`
-    -   **Target**: `4`
-    -   **Description**: "ちょっとスタイルを調整" (Adjusted style a bit)
-    -   **Published URL**: `https://script.google.com/macros/s/AKfycbxkVNMd-fLAOo6nA9j9vhYs2PUvFRKKkEafnaHGZ9QBv6uzTHv9w0s2CuFdHSRJjb2L/exec`
-
-3.  **Deployment 3 (Version 5)**:
-    -   **ID**: `AKfycbwTrTMc7qFkJ4T80-NbIe-DKzyug2_zp5bzZWUE1CNzeHP1M9ng5Vcb8UpMJnYPJS1Q`
-    -   **Target**: `5`
-    -   **Description**: "スコープ修正" (Scope correction)
-    -   **Published URL**: `https://script.google.com/macros/s/AKfycbwTrTMc7qFkJ4T80-NbIe-DKzyug2_zp5bzZWUE1CNzeHP1M9ng5Vcb8UpMJnYPJS1Q/exec`
-
-4.  **Deployment 4 (Version 2)**:
-    -   **ID**: `AKfycbyRvvRp9jc_Inkjchz2BJ4t8vfaTrQUriea6MFqZQ1UJYJ3hBkGGmqqUsuLuZadlD2d`
-    -   **Target**: `2`
-    -   **Description**: "v1"
-    -   **Published URL**: `https://script.google.com/macros/s/AKfycbyRvvRp9jc_Inkjchz2BJ4t8vfaTrQUriea6MFqZQ1UJYJ3hBkGGmqqUsuLuZadlD2d/exec`
-
-5.  **Deployment 5 (Version 1)**:
-    -   **ID**: `AKfycbzz_cJXg9ux5PL5jLCo_iRqcbkU1c8ax6T0q4IG1cY0aetHdvGzcMhtDd5zb14x-awQ`
-    -   **Target**: `1`
-    -   **Description**: (No specific description provided).
-    -   **Published URL**: `https://script.google.com/macros/s/AKfycbzz_cJXg9ux5PL5jLCo_iRqcbkU1c8ax6T0q4IG1cY0aetHdvGzcMhtDd5zb14x-awQ/exec`
-
-6.  **Deployment 6 (Version 3)**:
-    -   **ID**: `AKfycbxBCoTjY4_xwW8ens1g6p3xWd1JaL2D66Lv_sJc9KVZG0D1gEO5kIaf_0so7GK2VRwf`
-    -   **Target**: `3`
-    -   **Description**: "QR code"
-    -   **Published URL**: `https://script.google.com/macros/s/AKfycbxBCoTjY4_xwW8ens1g6p3xWd1JaL2D66Lv_sJc9KVZG0D1gEO5kIaf_0so7GK2VRwf/exec`
+The project is deployed as a web application. Specific deployment IDs and URLs would be available from the Google Apps Script project's deployment history.
