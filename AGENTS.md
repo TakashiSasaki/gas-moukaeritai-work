@@ -30,6 +30,7 @@ This repository is intended to gather all my Google Apps Script project files.
 
 ### Task 4: Creating Project Documentation
 - When asked to create a documentation file for a Google Apps Script project:
+    - **Source of Information:** Use the files already present in the project directory as the source for documentation. **Do NOT run `clasp pull` or any `clasp` command to fetch files for this task.**
     - **File Name:** The markdown file name must be the Script ID of the project (e.g., `1_SuiFIOR_EKToX4e2h8Jp3IEi8iSlJBnH24i2zQZSq2ETXDRTHXsQps3.md`).
     - **Location:** The file must be saved in the `docs/` directory.
     - **Content:** The markdown file should provide a comprehensive explanation of the project, including:
