@@ -34,7 +34,15 @@
             width: 100%; /* Content always takes full width */
         }
         ul { list-style-type: none; padding: 0; }
-        li a { display: block; padding: 5px 0; text-decoration: none; color: #007bff; }
+        li a {
+            display: block;
+            padding: 5px 0;
+            text-decoration: none;
+            color: #007bff;
+            white-space: nowrap; /* Prevent text wrapping */
+            overflow: hidden; /* Hide overflowing text */
+            text-overflow: ellipsis; /* Display ellipsis for truncated text */
+        }
         li a:hover { background-color: #f0f0f0; }
         .active-readme {
             background-color: #e9ecef; /* Light gray background */
