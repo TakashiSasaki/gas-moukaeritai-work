@@ -3,3 +3,4 @@ __pycache__/
 .gemini_tmp/script_id_analysis.json
 .gemini_tmp/commit_message.txt
 create_symlinks.py
+copy_readmes.py
