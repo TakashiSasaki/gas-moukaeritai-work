@@ -6,8 +6,8 @@
     <title>Project READMEs</title>
     <style>
         body { font-family: sans-serif; display: flex; height: 100vh; overflow: hidden; margin: 0; }
-        #sidebar { width: 30%; padding: 15px; border-right: 1px solid #ccc; overflow-y: auto; height: 100%; box-sizing: border-box; }
-        #content { flex-grow: 1; padding: 15px; overflow-y: auto; height: 100%; box-sizing: border-box; }
+        #sidebar { width: 30%; padding: 15px; border-right: 1px solid #ccc; overflow-y: auto; height: 100%; box-sizing: border-box; transition: width 0.3s ease; }
+        #content { flex-grow: 1; padding: 15px; overflow-y: auto; height: 100%; box-sizing: border-box; transition: opacity 0.3s ease; }
         ul { list-style-type: none; padding: 0; }
         li a { display: block; padding: 5px 0; text-decoration: none; color: #007bff; }
         li a:hover { background-color: #f0f0f0; }
@@ -18,11 +18,22 @@
         }
         pre { background-color: #eee; padding: 10px; border-radius: 5px; overflow-x: auto; }
         code { font-family: monospace; }
+
+        /* New styles for toggling content pane */
+        body.content-hidden #sidebar {
+            width: 100%;
+            border-right: none;
+        }
+        body.content-hidden #content {
+            display: none;
+            opacity: 0;
+        }
     </style>
 </head>
 <body>
     <div id="sidebar">
         <h1>Project READMEs</h1>
+        <button id="toggle-content" style="margin-bottom: 10px;">Close Content Pane</button>
         <ul id="readme-list">
             <!-- Markdown file links will be inserted here by JavaScript -->
         </ul>
@@ -39,6 +50,17 @@
         const readmeList = document.getElementById('readme-list');
         const readmeTitle = document.getElementById('readme-title');
         const readmeDisplay = document.getElementById('readme-display');
+        const toggleContentButton = document.getElementById('toggle-content');
+        const body = document.body;
+
+        toggleContentButton.addEventListener('click', () => {
+            body.classList.toggle('content-hidden');
+            if (body.classList.contains('content-hidden')) {
+                toggleContentButton.textContent = 'Open Content Pane';
+            } else {
+                toggleContentButton.textContent = 'Close Content Pane';
+            }
+        });
 
         const markdownFiles = [
             "107zb2vOE4Cn-ziIbJRk0AavZeS5l_suZIQplfhuzAeCSqaef7jYvxdP_.md",
