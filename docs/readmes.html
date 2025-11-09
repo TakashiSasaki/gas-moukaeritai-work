@@ -8,10 +8,9 @@
         html {
             background-color: lightblue; 
         }
-        body { font-family: sans-serif; display: flex; height: 100vh; overflow: hidden; margin: 20px; position: relative;
+        body { font-family: sans-serif; display: flex; height: 100vh; position: relative;
             background-color: lightyellow;
             padding: 20px;
-            border: 5px solid darkgreen;
         }
         #sidebar {
             width: 400px; /* Fixed width for sidebar */
@@ -39,6 +38,9 @@
             box-sizing: border-box;
             transition: opacity 0.3s ease;
             width: 100%; /* Content always takes full width */
+        }
+        #readme-display {
+            display: none; /* Hide markdown content by default */
         }
         ul { list-style-type: none; padding: 0; }
         li a {
@@ -140,10 +142,32 @@
             display: none; /* Hide when sidebar is open */
         }
 
+        /* Navigation button styles */
+        .nav-button {
+            position: fixed; /* Fixed position in content area */
+            top: 15px;
+            right: 15px;
+            z-index: 99; /* Revert z-index */
+            background-color: #e9ecef; /* Revert background-color */
+            color: #007bff; /* Blue text */
+            border: 1px solid #007bff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 1em;
+            cursor: pointer;
+            display: inline-block; /* To apply padding and border correctly */
+        }
+        .nav-button:hover {
+            background-color: #d0e0f0; /* Slightly darker gray on hover */
+            color: #0056b3; /* Darker blue text on hover */
+        }
+
 
     </style>
 </head>
 <body>
+    <a href="../index.html" class="nav-button">Home</a>
     <div id="sidebar">
         <div id="sidebar-header">
             <h1>Project READMEs</h1>
@@ -161,7 +185,9 @@
         <button id="hamburger-menu">☰</button>
         <h2 id="readme-title">Select a README to view</h2>
         <div id="readme-display">
-            <!-- Rendered markdown will appear here -->
+        #readme-display {
+            display: none; /* Hide markdown content by default */
+        }
         </div>
     </div>
     <div id="overlay"></div>
@@ -344,6 +370,7 @@
                 const markdown = await response.text();
                 readmeTitle.textContent = fileTitle; // Use the passed fileTitle for the title
                 readmeDisplay.innerHTML = marked.parse(markdown);
+                readmeDisplay.style.display = 'block'; // Make the markdown display visible
 
                 // Ensure content pane is visible and update button text
                 if (body.classList.contains('content-hidden')) {
@@ -365,9 +392,11 @@
         }
 
         // Optional: Load the first README by default and highlight it
+        /*
         if (markdownFiles.length > 0) {
             loadAndRenderMarkdown(markdownFiles[0].id, markdownFiles[0].title); // Pass ID and title
         }
+        */
     </script>
 </body>
 </html>
