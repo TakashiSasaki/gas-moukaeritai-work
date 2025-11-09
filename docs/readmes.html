@@ -91,11 +91,7 @@
             background-color: #c82333;
         }
 
-        /* Content toggle button (inside sidebar) */
-        #toggle-content {
-            width: 100%;
-            margin-bottom: 10px;
-        }
+
 
         /* Overlay for content when sidebar is open */
         #overlay {
@@ -124,14 +120,7 @@
             display: none; /* Hide when sidebar is open */
         }
 
-        /* Content hidden state */
-        body.content-hidden #content {
-            display: none;
-            opacity: 0;
-        }
-        body.content-hidden #hamburger-menu {
-            display: block; /* Show hamburger even if content is hidden */
-        }
+
     </style>
 </head>
 <body>
@@ -140,7 +129,6 @@
             <h1>Project READMEs</h1>
             <button id="close-sidebar">✕</button>
         </div>
-        <button id="toggle-content">Hide Content Pane</button>
         <ul id="readme-list">
             <!-- Markdown file links will be inserted here by JavaScript -->
         </ul>
@@ -159,7 +147,6 @@
         const readmeList = document.getElementById('readme-list');
         const readmeTitle = document.getElementById('readme-title');
         const readmeDisplay = document.getElementById('readme-display');
-        const toggleContentButton = document.getElementById('toggle-content');
         const hamburgerMenuButton = document.getElementById('hamburger-menu');
         const closeSidebarButton = document.getElementById('close-sidebar');
         const overlay = document.getElementById('overlay');
@@ -167,23 +154,12 @@
 
         // Initial state: sidebar closed, content visible
         body.classList.remove('sidebar-open');
-        body.classList.remove('content-hidden');
-        toggleContentButton.textContent = 'Hide Content Pane';
-
-        const toggleContentPane = () => {
-            body.classList.toggle('content-hidden');
-            if (body.classList.contains('content-hidden')) {
-                toggleContentButton.textContent = 'Show Content Pane';
-            } else {
-                toggleContentButton.textContent = 'Hide Content Pane';
-            }
-        };
+        body.classList.remove('content-hidden'); // Keep this as content should be visible by default
 
         const toggleSidebar = () => {
             body.classList.toggle('sidebar-open');
         };
 
-        toggleContentButton.addEventListener('click', toggleContentPane);
         hamburgerMenuButton.addEventListener('click', toggleSidebar);
         closeSidebarButton.addEventListener('click', toggleSidebar);
         overlay.addEventListener('click', toggleSidebar);
