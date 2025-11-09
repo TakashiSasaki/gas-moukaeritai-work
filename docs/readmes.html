@@ -71,6 +71,16 @@
             color: #0056b3; /* Darker blue text */
             font-weight: bold;
         }
+        .initial-message {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #fff3cd; /* Light yellow background for a warning/info feel */
+            border: 1px solid #ffeeba;
+            border-radius: 5px;
+            color: #856404; /* Dark yellow text */
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
         pre { background-color: #eee; padding: 10px; border-radius: 5px; overflow-x: auto; }
         code { font-family: monospace; }
 
@@ -167,7 +177,7 @@
     </style>
 </head>
 <body>
-    <a href="../index.html" class="nav-button">Home</a>
+    <a href="./index.html" class="nav-button">Home</a>
     <div id="sidebar">
         <div id="sidebar-header">
             <h1>Project READMEs</h1>
@@ -184,6 +194,12 @@
     <div id="content">
         <button id="hamburger-menu">☰</button>
         <h2 id="readme-title">Select a README to view</h2>
+        <div id="initial-message-container">
+            <p class="initial-message">
+                このページでは各プロジェクトのREADME.mdファイルが閲覧できます。<br>
+                表示される情報はリアルタイムで更新されないため、古い内容である可能性があります。
+            </p>
+        </div>
         <div id="readme-display">
         #readme-display {
             display: none; /* Hide markdown content by default */
@@ -371,6 +387,9 @@
                 readmeTitle.textContent = fileTitle; // Use the passed fileTitle for the title
                 readmeDisplay.innerHTML = marked.parse(markdown);
                 readmeDisplay.style.display = 'block'; // Make the markdown display visible
+
+                // Hide the initial message container
+                document.getElementById('initial-message-container').style.display = 'none';
 
                 // Ensure content pane is visible and update button text
                 if (body.classList.contains('content-hidden')) {
