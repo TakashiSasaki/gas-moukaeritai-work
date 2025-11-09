@@ -176,7 +176,7 @@
                     currentActive.classList.remove('active-readme');
                 }
 
-                const response = await fetch(`/readmes/${fileName}`);
+                const response = await fetch(`./readmes/${fileName}`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
