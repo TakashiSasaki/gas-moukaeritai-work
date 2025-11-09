@@ -5,9 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Project READMEs</title>
     <style>
-        body { font-family: sans-serif; display: flex; height: 100vh; overflow: hidden; margin: 0; }
-        #sidebar { width: 30%; padding: 15px; border-right: 1px solid #ccc; overflow-y: auto; height: 100%; box-sizing: border-box; transition: width 0.3s ease, left 0.3s ease; }
-        #content { flex-grow: 1; padding: 15px; overflow-y: auto; height: 100%; box-sizing: border-box; transition: opacity 0.3s ease; }
+        body { font-family: sans-serif; display: flex; height: 100vh; overflow: hidden; margin: 0; position: relative; }
+        #sidebar {
+            width: 300px; /* Fixed width for sidebar */
+            max-width: 80%; /* Max width for smaller screens */
+            padding: 15px;
+            background-color: white;
+            border-right: 1px solid #ccc;
+            overflow-y: auto;
+            height: 100%;
+            box-sizing: border-box;
+            position: fixed; /* Off-canvas position */
+            top: 0;
+            left: -300px; /* Hidden off-screen */
+            z-index: 101;
+            transition: left 0.3s ease;
+        }
+        body.sidebar-open #sidebar {
+            left: 0; /* Slide in */
+        }
+        #content {
+            flex-grow: 1;
+            padding: 15px;
+            overflow-y: auto;
+            height: 100%;
+            box-sizing: border-box;
+            transition: opacity 0.3s ease;
+            width: 100%; /* Content always takes full width */
+        }
         ul { list-style-type: none; padding: 0; }
         li a { display: block; padding: 5px 0; text-decoration: none; color: #007bff; }
         li a:hover { background-color: #f0f0f0; }
@@ -33,98 +58,80 @@
             background-color: #0056b3;
         }
 
-        /* Sticky button in sidebar */
-        #toggle-content {
+        /* Sidebar header and close button */
+        #sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
             position: sticky;
             top: 0;
-            background-color: white; /* Ensure button background is white to stand out */
+            background-color: white;
             z-index: 102;
-            width: 100%; /* Make sticky button full width of sidebar */
-            box-sizing: border-box;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        #sidebar-header h1 {
+            margin: 0;
+            font-size: 1.5em;
+        }
+        #close-sidebar {
+            background-color: #dc3545; /* Red close button */
+            padding: 5px 10px;
+        }
+        #close-sidebar:hover {
+            background-color: #c82333;
+        }
+
+        /* Content toggle button (inside sidebar) */
+        #toggle-content {
+            width: 100%;
             margin-bottom: 10px;
         }
 
-        /* New styles for toggling content pane */
-        body.content-hidden #sidebar {
+        /* Overlay for content when sidebar is open */
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            border-right: none;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            display: none;
         }
+        body.sidebar-open #overlay {
+            display: block;
+        }
+
+        /* Hamburger button styles */
+        #hamburger-menu {
+            position: fixed; /* Fixed position in content area */
+            top: 15px;
+            left: 15px;
+            z-index: 99; /* Below sidebar, above content */
+            display: block; /* Always visible */
+        }
+        body.sidebar-open #hamburger-menu {
+            display: none; /* Hide when sidebar is open */
+        }
+
+        /* Content hidden state */
         body.content-hidden #content {
             display: none;
             opacity: 0;
         }
-        /* Hamburger button styles */
-        #hamburger-menu {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            z-index: 100;
-            display: none; /* Hidden by default */
-        }
         body.content-hidden #hamburger-menu {
-            display: block; /* Show when content is hidden */
-        }
-        body.content-hidden #toggle-content {
-            display: none; /* Hide sidebar toggle when content is hidden */
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            body {
-                flex-direction: column; /* Stack sidebar and content vertically */
-            }
-            #sidebar {
-                width: 100%;
-                position: fixed; /* Fixed position for off-canvas */
-                height: 100%;
-                left: -100%; /* Hidden off-screen */
-                top: 0;
-                z-index: 101;
-                border-right: none;
-                padding-top: 60px; /* Space for a potential header/close button */
-            }
-            body.sidebar-open #sidebar {
-                left: 0; /* Slide in */
-            }
-            #content {
-                flex-grow: 1;
-                width: 100%;
-                position: relative;
-            }
-            body.sidebar-open #content {
-                /* Optional: Dim or shift content when sidebar is open */
-                /* transform: translateX(100%); */
-            }
-            #hamburger-menu {
-                display: block; /* Always show hamburger on small screens */
-                position: fixed; /* Keep hamburger visible */
-                top: 15px;
-                left: 15px;
-                background-color: #007bff;
-                color: white;
-                padding: 10px 15px;
-                border-radius: 4px;
-                z-index: 103;
-            }
-            body.sidebar-open #hamburger-menu {
-                display: none; /* Hide hamburger when sidebar is open */
-            }
-            #toggle-content {
-                display: block; /* Always show sidebar toggle on small screens */
-                position: absolute; /* Position within sidebar */
-                top: 15px;
-                right: 15px;
-                width: auto; /* Reset width for this button */
-            }
-            body.content-hidden #toggle-content {
-                display: none; /* Hide sidebar toggle when content is hidden */
-            }
+            display: block; /* Show hamburger even if content is hidden */
         }
     </style>
 </head>
 <body>
     <div id="sidebar">
-        <h1>Project READMEs</h1>
+        <div id="sidebar-header">
+            <h1>Project READMEs</h1>
+            <button id="close-sidebar">✕</button>
+        </div>
         <button id="toggle-content">Hide Content Pane</button>
         <ul id="readme-list">
             <!-- Markdown file links will be inserted here by JavaScript -->
@@ -137,6 +144,7 @@
             <!-- Rendered markdown will appear here -->
         </div>
     </div>
+    <div id="overlay"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
@@ -145,11 +153,14 @@
         const readmeDisplay = document.getElementById('readme-display');
         const toggleContentButton = document.getElementById('toggle-content');
         const hamburgerMenuButton = document.getElementById('hamburger-menu');
+        const closeSidebarButton = document.getElementById('close-sidebar');
+        const overlay = document.getElementById('overlay');
         const body = document.body;
 
-        // Set initial state: content pane hidden by default
-        body.classList.add('content-hidden');
-        toggleContentButton.textContent = 'Show Content Pane';
+        // Initial state: sidebar closed, content visible
+        body.classList.remove('sidebar-open');
+        body.classList.remove('content-hidden');
+        toggleContentButton.textContent = 'Hide Content Pane';
 
         const toggleContentPane = () => {
             body.classList.toggle('content-hidden');
@@ -157,10 +168,6 @@
                 toggleContentButton.textContent = 'Show Content Pane';
             } else {
                 toggleContentButton.textContent = 'Hide Content Pane';
-            }
-            // On small screens, if content pane is shown, close sidebar
-            if (window.innerWidth <= 768 && !body.classList.contains('content-hidden')) {
-                body.classList.remove('sidebar-open');
             }
         };
 
@@ -170,6 +177,8 @@
 
         toggleContentButton.addEventListener('click', toggleContentPane);
         hamburgerMenuButton.addEventListener('click', toggleSidebar);
+        closeSidebarButton.addEventListener('click', toggleSidebar);
+        overlay.addEventListener('click', toggleSidebar);
 
         const markdownFiles = [
             "107zb2vOE4Cn-ziIbJRk0AavZeS5l_suZIQplfhuzAeCSqaef7jYvxdP_.md",
