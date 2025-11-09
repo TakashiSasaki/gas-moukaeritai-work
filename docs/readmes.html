@@ -163,6 +163,7 @@
         hamburgerMenuButton.addEventListener('click', toggleSidebar);
         closeSidebarButton.addEventListener('click', toggleSidebar);
         overlay.addEventListener('click', toggleSidebar);
+        readmeDisplay.addEventListener('click', toggleSidebar); // New: Toggle sidebar by clicking markdown display
 
         const markdownFiles = [
             { id: "1-0bJIb3TYc29MosGWLbTUl12TuVC7_W_BccV_moQwZX9HXqR8bnb6wcs.md", title: "Copy of Public ScriptCache" },
@@ -279,11 +280,13 @@
         ];
 
 
-        markdownFiles.forEach(item => { // Changed fileName to item
+        markdownFiles.forEach((item, index) => { // Added index parameter
             const listItem = document.createElement('li');
             const link = document.createElement('a');
+
+            // Set link content to include index, title, and ID
             link.href = '#';
-            link.innerHTML = `<strong>${item.title}</strong><br><small>${item.id}</small>`; // Display title and ID
+            link.innerHTML = `${index + 1}. <strong>${item.title}</strong><br><small>${item.id}</small>`; // Display index, title and ID
             link.setAttribute('data-filename', item.id); // Store ID in data attribute
             link.onclick = (event) => {
                 event.preventDefault();
