@@ -28,17 +28,32 @@
             display: none;
             opacity: 0;
         }
+        /* Hamburger button styles */
+        #hamburger-menu {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 100;
+            display: none; /* Hidden by default */
+        }
+        body.content-hidden #hamburger-menu {
+            display: block; /* Show when content is hidden */
+        }
+        body.content-hidden #toggle-content {
+            display: none; /* Hide sidebar toggle when content is hidden */
+        }
     </style>
 </head>
 <body>
     <div id="sidebar">
         <h1>Project READMEs</h1>
-        <button id="toggle-content" style="margin-bottom: 10px;">Close Content Pane</button>
+        <button id="toggle-content" style="margin-bottom: 10px;">Hide Content Pane</button>
         <ul id="readme-list">
             <!-- Markdown file links will be inserted here by JavaScript -->
         </ul>
     </div>
     <div id="content">
+        <button id="hamburger-menu">☰ Show Sidebar</button>
         <h2 id="readme-title">Select a README to view</h2>
         <div id="readme-display">
             <!-- Rendered markdown will appear here -->
@@ -51,16 +66,24 @@
         const readmeTitle = document.getElementById('readme-title');
         const readmeDisplay = document.getElementById('readme-display');
         const toggleContentButton = document.getElementById('toggle-content');
+        const hamburgerMenuButton = document.getElementById('hamburger-menu');
         const body = document.body;
 
-        toggleContentButton.addEventListener('click', () => {
+        // Set initial state: content pane hidden by default
+        body.classList.add('content-hidden');
+        toggleContentButton.textContent = 'Show Content Pane';
+
+        const togglePane = () => {
             body.classList.toggle('content-hidden');
             if (body.classList.contains('content-hidden')) {
-                toggleContentButton.textContent = 'Open Content Pane';
+                toggleContentButton.textContent = 'Show Content Pane';
             } else {
-                toggleContentButton.textContent = 'Close Content Pane';
+                toggleContentButton.textContent = 'Hide Content Pane';
             }
-        });
+        };
+
+        toggleContentButton.addEventListener('click', togglePane);
+        hamburgerMenuButton.addEventListener('click', togglePane);
 
         const markdownFiles = [
             "107zb2vOE4Cn-ziIbJRk0AavZeS5l_suZIQplfhuzAeCSqaef7jYvxdP_.md",
