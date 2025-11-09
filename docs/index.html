@@ -49,10 +49,10 @@
 
     <header class="hero">
         <div class="container">
-            <h1 class="mb-3">GAS もっと帰りたい</h1>
-            <p class="lead">散らばった Google Apps Script のスタンドアロンプロジェクトを一覧表示し、管理を劇的に効率化するツールです。</p>
-            <a href="https://script.google.com/macros/s/AKfycbxVLc_Z3Frvgvx8xozPZ7ntXPx05lJMvegJ9sE4HhVq/exec" class="btn btn-custom btn-lg mt-4 me-2">プロジェクト一覧を見る</a>
-            <a href="readmes.html" class="btn btn-custom btn-lg mt-4">READMEs一覧を見る</a>
+            <h1 class="mb-3">Google Apps Script 関連</h1>
+            <p class="lead"></p>
+            <a href="https://script.google.com/macros/s/AKfycbxVLc_Z3Frvgvx8xozPZ7ntXPx05lJMvegJ9sE4HhVq/exec" class="btn btn-custom btn-lg mt-4 me-2">GASプロジェクトを一覧するウェブアプリを開く</a>
+            <a href="readmes.html" class="btn btn-custom btn-lg mt-4">定期的に取得している全プロジェクトのREADME.mdを見る</a>
         </div>
     </header>
 
@@ -89,39 +89,7 @@
                         document.getElementById('markdown-content').innerHTML = '<p class="text-center text-danger">Could not load the requested page.</p>';
                     });
             } else {
-                document.getElementById('markdown-content').innerHTML = `
-                    <section class="text-center mb-5">
-                        <h2 class="section-title">主な機能</h2>
-                        <p class="lead text-muted">GASプロジェクトの管理をシンプルに、そしてパワフルに。</p>
-                    </section>
-
-                    <div class="row text-center">
-                        <div class="col-lg-4 mb-4">
-                            <div class="card h-100 shadow-sm">
-                                <div class="card-body p-5">
-                                    <h5 class="card-title fw-bold mb-3">プロジェクトの自動検出</h5>
-                                    <p class="card-text">Google Drive内のスタンドアロンスクリプトを自動で探し出し、ダッシュボードに一覧表示します。</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-4 mb-4">
-                            <div class="card h-100 shadow-sm">
-                                <div class="card-body p-5">
-                                    <h5 class="card-title fw-bold mb-3">クイックアクセス</h5>
-                                    <p class="card-text">プロジェクト名や最終更新日でソート・フィルタリング。目的のスクリプトに素早くたどり着けます。</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-lg-4 mb-4">
-                            <div class="card h-100 shadow-sm">
-                                <div class="card-body p-5">
-                                    <h5 class="card-title fw-bold mb-3">コードの直接編集</h5>
-                                    <p class="card-text">一覧から直接claspでコードをpull & push。もうスクリプトエディタを探し回る必要はありません。</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                document.getElementById('markdown-content').innerHTML = ``;
             }
         });
     </script>
