@@ -11,6 +11,11 @@
         ul { list-style-type: none; padding: 0; }
         li a { display: block; padding: 5px 0; text-decoration: none; color: #007bff; }
         li a:hover { background-color: #f0f0f0; }
+        .active-readme {
+            background-color: #e9ecef; /* Light gray background */
+            color: #0056b3; /* Darker blue text */
+            font-weight: bold;
+        }
         pre { background-color: #eee; padding: 10px; border-radius: 5px; overflow-x: auto; }
         code { font-family: monospace; }
     </style>
@@ -154,6 +159,7 @@
             const link = document.createElement('a');
             link.href = '#';
             link.textContent = fileName;
+            link.setAttribute('data-filename', fileName); // Add data-filename attribute
             link.onclick = (event) => {
                 event.preventDefault();
                 loadAndRenderMarkdown(fileName);
@@ -164,6 +170,12 @@
 
         async function loadAndRenderMarkdown(fileName) {
             try {
+                // Remove active class from previously active link
+                const currentActive = document.querySelector('#readme-list .active-readme');
+                if (currentActive) {
+                    currentActive.classList.remove('active-readme');
+                }
+
                 const response = await fetch(`/readmes/${fileName}`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -171,6 +183,13 @@
                 const markdown = await response.text();
                 readmeTitle.textContent = fileName;
                 readmeDisplay.innerHTML = marked.parse(markdown);
+
+                // Add active class to the newly loaded link
+                const newActiveLink = document.querySelector(`#readme-list a[data-filename="${fileName}"]`);
+                if (newActiveLink) {
+                    newActiveLink.classList.add('active-readme');
+                }
+
             } catch (error) {
                 readmeTitle.textContent = `Error loading ${fileName}`;
                 readmeDisplay.innerHTML = `<p>Failed to load markdown: ${error.message}</p>`;
@@ -178,7 +197,7 @@
             }
         }
 
-        // Optional: Load the first README by default
+        // Optional: Load the first README by default and highlight it
         if (markdownFiles.length > 0) {
             loadAndRenderMarkdown(markdownFiles[0]);
         }
