@@ -1,44 +1,19 @@
-# notion-page-title-exporter
+# 1J1eizA18n82rnRB0bWEWXQuyx6ca6FlI4rCQpsMX2K1-_RSj57HmU-cK
 
 ## Overview
-
-The "notion-page-title-exporter" project is a minimal Google Apps Script. It currently contains a single, empty function, suggesting it's either a placeholder, an unfinished project, or a base for future development. Its purpose, as indicated by the name, is likely intended for exporting Notion page titles, though this functionality is not yet implemented.
+This document provides an overview of the Google Apps Script project with Script ID `1J1eizA18n82rnRB0bWEWXQuyx6ca6FlI4rCQpsMX2K1-_RSj57HmU-cK`.
 
 ## Functionality
+(To be filled in)
 
-The project contains a single, empty function.
-
-### Core Features
-
--   **`myFunction()`:** An empty function serving as a placeholder.
-
-### Code Examples
-
-#### `Code.js`
-
-```javascript
-function myFunction() {
-  
-}
-```
+## Web Interface
+(To be filled in)
 
 ## Permissions
+(To be filled in)
 
-The `appsscript.json` file indicates no special dependencies or permissions are required for this project.
-
-```json
-{
-  "timeZone": "Asia/Tokyo",
-  "dependencies": {
-  },
-  "exceptionLogging": "STACKDRIVER",
-  "runtimeVersion": "V8"
-}
-```
+## Configuration
+(To be filled in)
 
 ## Deployments
-
-The project has one deployment:
-
--   **ID (HEAD):** `AKfycbypi8Zs5Z4xBWbLkOHi5uzwGmVk3_fjk68dmTkio35l`
-    -   **URL:** `https://script.google.com/macros/s/AKfycbypi8Zs5Z4xBWbLkOHi5uzwGmVk3_fjk68dmTkio35l/exec`
+(To be filled in)
