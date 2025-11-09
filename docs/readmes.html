@@ -229,6 +229,12 @@
                 readmeTitle.textContent = fileName;
                 readmeDisplay.innerHTML = marked.parse(markdown);
 
+                // Ensure content pane is visible and update button text
+                if (body.classList.contains('content-hidden')) {
+                    body.classList.remove('content-hidden');
+                    toggleContentButton.textContent = 'Hide Content Pane';
+                }
+
                 // Add active class to the newly loaded link
                 const newActiveLink = document.querySelector(`#readme-list a[data-filename="${fileName}"]`);
                 if (newActiveLink) {
