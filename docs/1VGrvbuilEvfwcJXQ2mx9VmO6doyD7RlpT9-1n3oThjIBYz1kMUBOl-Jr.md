@@ -1,51 +1,104 @@
-# Google Apps Script Project: 1VGrvbuilEvfwcJXQ2mx9VmO6doyD7RlpT9-1n3oThjIBYz1kMUBOl-Jr
+# Project: Multi-Stage Survey/Experiment Web Application
 
-## Project Overview
-This Google Apps Script project is a web application designed for conducting surveys or experiments, likely focused on user choices, rankings, and preferences. It features a multi-page web interface where user interactions are recorded into a designated Google Sheet for data collection and analysis.
+This Google Apps Script project is a web application designed for conducting complex multi-stage surveys or experiments. It features a multi-page web interface where user interactions, choices, rankings, and personal information are recorded into a designated Google Sheet for data collection and analysis.
+
+## Overview
+
+The primary purpose of this project is to facilitate research or data gathering through a structured, interactive online experience. It meticulously logs user responses and timestamps, providing a robust backend for quantitative analysis of experimental data.
 
 ## Functionality
 
-### `コード.js`
-This file contains the server-side logic for handling web requests and recording user data.
--   **`doGet()`**: The entry point for the web application. It records the current timestamp into a Google Sheet (ID: `12D-ZMx10I3Yfaq2X_L1U5auMkKAu1gDRaOKJVRyNYUw`, Sheet: "シート1") and then serves the `index.html` template.
--   **`recordKojin(start_time, q1, q2, q3)`**: Records personal information (start time and three questions/answers) into the "Kojin" sheet.
--   **`recordPchoice(start_time, start_pchoice, qestion, element_id, element_value, element_checked)`**: Records practice choice results into the "pchoice" sheet.
--   **`recordPrank00`, `recordPrank01`, `recordPrank02(...)`**: Records practice ranking results into the "prank" sheet.
--   **`recordPbest00`, `recordPbest01`, `recordPbest02(...)`**: Records practice "best choice" results into the "pbest" sheet.
--   **`recordchoice01` to `recordchoice04(...)`**: Records main experiment choice results into the "choice" sheet. These functions are differentiated by the number of choices (6 or 8) and the presence of "superiority" (優越 - meaning dominance or preference).
--   **`recordrank01` to `recordrank44(...)`**: Records main experiment ranking results into the "rank" sheet. These functions are highly granular, categorized by choice count, "superiority," and different "rank" stages (e.g., `rank01` to `rank04`, `rank11` to `rank14`, etc.).
--   **`recordbest01` to `recordbest44(...)`**: Records main experiment "best choice" results into the "best" sheet. These functions are categorized by choice count, "superiority," and different "best" stages (e.g., unrestricted, required 2, required 3, optional 2, optional 3).
--   **`recordrest01`, `recordrest02`, `recordrest03(...)`**: Records data related to rest periods during the experiment into the "rest" sheet.
--   **`getNm()`**: Returns the content of the "nm" HTML template.
--   **`getTr(cc)`**: Reads data from the "物件" (property/item) sheet, filters it based on a given `cc` parameter, and then injects this data into the "tr" HTML template.
+The core functionality is implemented in `コード.js`, with the extensive user interface defined across numerous HTML files.
 
-### Web Interface (`index.html` and other HTML files)
-The `index.html` file serves as the main entry point for the web interface, which is composed of numerous dynamically included HTML templates.
--   **Structure**: The `index.html` file includes a `<style>` block with extensive CSS rules that initially hide most of the content (`display:none;`). It then dynamically includes content from a large number of other HTML files (e.g., `hosoku1.html`, `pchoice.html`, `rank01.html`, `best01.html`, etc.) using server-side includes (`<?!=HtmlService.createHtmlOutputFromFile("filename").getContent();?>` and `<?!=HtmlService.createTemplateFromFile("filename").evaluate().getContent();?>`).
--   **Multi-stage Interface**: The extensive use of `display:none;` for most sections suggests a multi-stage or interactive survey/experiment where different sections are revealed or hidden based on user interaction or client-side script logic.
--   **External Libraries**: The interface utilizes jQuery for client-side scripting.
--   **Client-side Script**: A small client-side script initializes a `start_time` variable, indicating that the timing of user interactions is a crucial aspect of the experiment.
--   **Survey Link**: The page includes a link to an external Google Forms survey (`https://goo.gl/MtFDSv`).
+### Core Features
+
+-   **`doGet()`**: Serves as the entry point for the web application. It records the current timestamp into a Google Sheet ("シート1") and then serves the main `index.html` template.
+-   **Data Recording Functions**: A large number of `record...` functions are defined (e.g., `recordKojin`, `recordPchoice`, `recordPrank00`, `recordchoice01`, `recordrank01`, `recordbest01`, `recordrest01`). Each of these functions is responsible for:
+    -   Opening a specific sheet within a hardcoded Google Sheet ID (`12D-ZMx10I3Yfaq2X_L1U5auMkKAu1gDRaOKJVRyNYUw`).
+    -   Inserting a new row at the top of the sheet.
+    -   Writing specific user input data (including timestamps, element IDs, values, and checked states) into that new row.
+-   **HTML Content Retrieval**:
+    -   `getNm()`: Returns the content of the "nm" HTML template.
+    -   `getTr(cc)`: Reads data from the "物件" (property/item) sheet, filters it based on a given `cc` parameter, and then injects this data into the "tr" HTML template.
+
+### Code Examples
+
+#### `コード.js` (Excerpt)
+
+```javascript
+function doGet() {
+  var sheet = SpreadsheetApp.openById("12D-ZMx10I3Yfaq2X_L1U5auMkKAu1gDRaOKJVRyNYUw").getSheetByName("シート1");
+  var number_format = sheet.getRange(1,1).getNumberFormat();
+  sheet.insertRowsBefore(1,1);
+  var now = new Date();
+  sheet.getRange(1,1,1,1).setValues([[now]]);
+  sheet.getRange(1,1,1,1).setNumberFormat(number_format);
+  var html_template = HtmlService.createTemplateFromFile("index");
+  var html_output = html_template.evaluate();
+  return html_output;
+}
+//個人情報の記録
+function recordKojin(start_time,q1,q2,q3){
+  var sheet = SpreadsheetApp.openById("12D-ZMx10I3Yfaq2X_L1U5auMkKAu1gDRaOKJVRyNYUw").getSheetByName("Kojin");
+  sheet.insertRowsBefore(1,1);
+  var range = sheet.getRange(1,1,1,4);
+  range.setValues([[start_time,q1,q2,q3]]);
+}
+//練習の選択結果の記録
+function recordPchoice(start_time, start_pchoice, qestion, element_id, element_value, element_checked){
+  var sheet = SpreadsheetApp.openById("12D-ZMx10I3Yfaq2X_L1U5auMkKAu1gDRaOKJVRyNYUw").getSheetByName("pchoice");
+  sheet.insertRowsBefore(1,1);  
+  var range = sheet.getRange(1,1,1,6);
+  range.setValues([[start_time, start_pchoice, qestion, element_id, element_value, element_checked]]);
+}
+//練習の順位付け結果の記録
+function recordPrank00(start_time, start_prank00,click_time, element_id, element_value, element_checked) {
+  var sheet = SpreadsheetApp.openById("12D-ZMx10I3Yfaq2X_L1U5auMkKAu1gDRaOKJVRyNYUw").getSheetByName("prank");
+  sheet.insertRowsBefore(1,1);  
+  var range = sheet.getRange(1,1,1,6);
+  range.setValues([[start_time, start_prank00,click_time, element_id, element_value, element_checked]]);
+}
+// ... (many more record functions) ...
+```
+
+## Web Interface (`index.html` and numerous other HTML files)
+
+The `index.html` file serves as the main entry point for a highly structured, multi-page web interface. It dynamically includes content from a large number of other HTML files, each representing a different stage or section of the survey/experiment.
+
+-   **Multi-Stage Structure**: The extensive use of `display:none;` in the inline CSS for most sections, combined with client-side JavaScript functions like `show_hosoku2()`, `show_prank00()`, etc., indicates a sequential flow where different parts of the survey are revealed or hidden based on user progression.
+-   **Input Types**: Various HTML elements are used for input, including radio buttons for gender/grade (`kojin.html`), text input for age (`kojin.html`), radio buttons for choices (`pchoice.html`), and dropdowns for rankings (`rank01.html`).
+-   **Data Display**: Content from the "物件" (property/item) sheet is dynamically loaded into tables (`pchoice.html`, `rank01.html`) to present options to the user.
+-   **Client-side Scripting**: JavaScript (including jQuery) handles user interactions, client-side validation (e.g., for age input, unique ranks), and calls server-side `record...` functions via `google.script.run` to log data.
+-   **External Survey Link**: The page includes a link to an external Google Forms survey (`https://goo.gl/MtFDSv`).
+
+### Example HTML Sections
+
+-   **`kojin.html`**: Collects personal information (gender, age, grade).
+-   **`pchoice.html`**: Presents a practice choice task with multiple options.
+-   **`rank01.html`**: Presents a ranking task with dropdowns for users to assign ranks.
 
 ## Permissions
-The `appsscript.json` manifest specifies the following web app execution permissions:
--   `webapp.access`: `ANYONE_ANONYMOUS` - This means the web application can be accessed by anyone, even without a Google account.
--   `webapp.executeAs`: `USER_DEPLOYING` - The script will execute with the identity and permissions of the user who deployed the web app.
+
+The `appsscript.json` file specifies the following permissions:
+
+-   **Execution**: `USER_DEPLOYING` (the script runs with the identity and permissions of the user who deployed the web app).
+-   **Access**: `ANYONE_ANONYMOUS` (the web app is accessible by anyone, even without a Google account).
+-   **Google Services**: Implicitly uses `SpreadsheetApp` for reading and writing data to Google Sheets, and `HtmlService` for serving the web interface.
 
 ## Configuration
-This project relies on a specific Google Sheet (ID: `12D-ZMx10I3Yfaq2X_L1U5auMkKAu1gDRaOKJVRyNYUw`) for storing all collected data across various sheets within that spreadsheet (e.g., "シート1", "Kojin", "pchoice", "prank", "pbest", "choice", "rank", "best", "rest", "物件").
+
+-   **Time Zone**: The project is configured for the `Asia/Tokyo` time zone.
+-   **Hardcoded Spreadsheet ID**: All data is recorded into a single hardcoded Google Sheet with the ID `12D-ZMx10I3Yfaq2X_L1U5auMkKAu1gDRaOKJVRyNYUw`. This spreadsheet is expected to have multiple sheets named "シート1", "Kojin", "pchoice", "prank", "pbest", "choice", "rank", "best", "rest", and "物件".
 
 ## Deployments
-The project has two deployments:
 
-1.  **Deployment 1 (HEAD)**:
-    -   **ID**: `AKfycbwII4BHZbgpwPcEUc0iQu0Ks0OftjKwwn5zSO_skyQ`
-    -   **Target**: `HEAD` (This deployment points to the latest saved version of the script).
-    -   **Description**: (No specific description provided).
-    -   **Published URL**: `https://script.google.com/macros/s/AKfycbwII4BHZbgpwPcEUc0iQu0Ks0OftjKwwn5zSO_skyQ/exec`
+The project is deployed as a web application. The following deployments are configured:
 
-2.  **Deployment 2 (Version 15)**:
-    -   **ID**: `AKfycbzeGbJwCa36rSEB60hvIiTQzkpqsjHVgxarhxvKpgFVzTHLZPQ`
-    -   **Target**: `15`
-    -   **Description**: "web app meta-version"
-    -   **Published URL**: `https://script.google.com/macros/s/AKfycbzeGbJwCa36rSEB60hvIiTQzkpqsjHVgxarhxvKpgFVzTHLZPQ/exec`
+*   **Deployment ID**: `AKfycbwII4BHZbgpwPcEUc0iQu0Ks0OftjKwwn5zSO_skyQ`
+    *   **Target**: `HEAD`
+    *   **Description**: `(empty)`
+*   **Deployment ID**: `AKfycbzeGbJwCa36rSEB60hvIiTQzkpqsjHVgxarhxvKpgFVzTHLZPQ`
+    *   **Target**: `15`
+    *   **Description**: `web app meta-version`
+
+Specific deployment URLs would be available from the Google Apps Script project's deployment history.
