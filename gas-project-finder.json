@@ -1,9 +1,51 @@
 [
   {
+    "name": " Apps Script デプロイメント マネージャ データ更新 キャッシュクリア & 再取得",
+    "id": "1T231UlZPgKgysL27aTsmZ9jNNfyyhD8vwjwaXafCVfoDw5lPspuHdE54",
+    "url": "https://script.google.com/d/1T231UlZPgKgysL27aTsmZ9jNNfyyhD8vwjwaXafCVfoDw5lPspuHdE54/edit?usp=drivesdk",
+    "lastUpdated": "2025-11-08T17:37:30.571Z"
+  },
+  {
+    "name": "タイトル文字列の適切さ判定",
+    "id": "1_NL4Xn5Qr6D3WKRDQ1mJ4s_OjdhT8VjJQ2WT1IxUNBA7nBAXiw786eQE",
+    "url": "https://script.google.com/d/1_NL4Xn5Qr6D3WKRDQ1mJ4s_OjdhT8VjJQ2WT1IxUNBA7nBAXiw786eQE/edit?usp=drivesdk",
+    "lastUpdated": "2025-11-08T07:43:12.781Z"
+  },
+  {
+    "name": "Googleドライブ内文書一覧",
+    "id": "1_Pws6hwzU2G6N2zzPciAzafjlpLnVdXX6KUbfr6Hco7JNLfeQGsWYiqJ",
+    "url": "https://script.google.com/d/1_Pws6hwzU2G6N2zzPciAzafjlpLnVdXX6KUbfr6Hco7JNLfeQGsWYiqJ/edit?usp=drivesdk",
+    "lastUpdated": "2025-11-08T02:52:34.749Z"
+  },
+  {
+    "name": "Markdown converter",
+    "id": "1LGsJ9yBfZuR3Rr48dS6nofC35YydAB9e3ONl8oBRkKiwRl-K6ulD35Pw",
+    "url": "https://script.google.com/d/1LGsJ9yBfZuR3Rr48dS6nofC35YydAB9e3ONl8oBRkKiwRl-K6ulD35Pw/edit?usp=drivesdk",
+    "lastUpdated": "2025-11-05T04:00:43.297Z"
+  },
+  {
+    "name": "Docsタイトル提案",
+    "id": "1jdrz76e6DCQI4bmZAqlkRhM8uMjvycSr8MfNE1AFEpNk3IDjwyw4i0Rc",
+    "url": "https://script.google.com/d/1jdrz76e6DCQI4bmZAqlkRhM8uMjvycSr8MfNE1AFEpNk3IDjwyw4i0Rc/edit?usp=drivesdk",
+    "lastUpdated": "2025-10-14T03:32:25.496Z"
+  },
+  {
+    "name": "read-only-datastore-admin",
+    "id": "1i84akpunM6Pkgsi2VV7JP5CztrpsMCag0UFprLBIQ14ZgveHyC2ndDQx",
+    "url": "https://script.google.com/d/1i84akpunM6Pkgsi2VV7JP5CztrpsMCag0UFprLBIQ14ZgveHyC2ndDQx/edit?usp=drivesdk",
+    "lastUpdated": "2025-08-26T00:16:00.875Z"
+  },
+  {
+    "name": "rename-by-gemini",
+    "id": "1eemaTl1sGS9LyDLY4MyflHQdcEDwMp-JNXz6bABf1cY-CPcc4wKocROt",
+    "url": "https://script.google.com/d/1eemaTl1sGS9LyDLY4MyflHQdcEDwMp-JNXz6bABf1cY-CPcc4wKocROt/edit?usp=drivesdk",
+    "lastUpdated": "2025-08-04T03:32:23.173Z"
+  },
+  {
     "name": "Android package list",
     "id": "107QMAgKGFZ6dXRCrA7mpN9aSapN0fZlXw57ipPZREt5zSQ0UNSTLEH50",
     "url": "https://script.google.com/d/107QMAgKGFZ6dXRCrA7mpN9aSapN0fZlXw57ipPZREt5zSQ0UNSTLEH50/edit?usp=drivesdk",
-    "lastUpdated": "2025-07-10T05:45:37.929Z"
+    "lastUpdated": "2025-07-10T06:45:54.297Z"
   },
   {
     "name": "dns.moukaeritai.work",

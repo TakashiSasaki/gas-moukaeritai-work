@@ -1,0 +1,14 @@
+{
+  "name": "Docsタイトル提案",
+  "id": "1jdrz76e6DCQI4bmZAqlkRhM8uMjvycSr8MfNE1AFEpNk3IDjwyw4i0Rc",
+  "url": "https://script.google.com/d/1jdrz76e6DCQI4bmZAqlkRhM8uMjvycSr8MfNE1AFEpNk3IDjwyw4i0Rc/edit?usp=drivesdk",
+  "lastUpdated": "2025-10-14T03:32:25.496Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbyqPxeTHiJ69dE01XR8MLEVVemvCF8OGJHREElb-ug",
+      "target": "HEAD",
+      "description": ""
+    }
+  ]
+}

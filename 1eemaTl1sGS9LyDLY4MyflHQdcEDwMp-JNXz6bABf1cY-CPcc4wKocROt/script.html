@@ -1,0 +1,358 @@
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // --- Element Selectors ---
+  const listFilesBtn = document.getElementById('list-files-btn');
+  const renameBtn = document.getElementById('rename-selected-btn');
+  const folderIdInput = document.getElementById('folder-id');
+  const fileListBody = document.getElementById('file-list-body');
+  const loader = document.getElementById('loader');
+  const loaderText = document.getElementById('loader-text');
+  const resultsDiv = document.getElementById('results');
+  const errorMessageDiv = document.getElementById('error-message');
+  const selectAllCheckbox = document.getElementById('select-all-checkbox');
+  const resultsCount = document.getElementById('results-count');
+  const filterPatternsTextarea = document.getElementById('filter-patterns');
+  const stopAllBtn = document.getElementById('stop-all-btn');
+  // ★追加: 全サムネイル取得ボタン
+  const getAllThumbnailsBtn = document.getElementById('get-all-thumbnails-btn');
+  
+  // Settings Modal
+  const settingsModal = document.getElementById('settings-modal');
+  const openSettingsBtn = document.getElementById('open-settings-btn');
+  const closeSettingsBtn = document.getElementById('close-settings-btn');
+  const saveApiKeyBtn = document.getElementById('save-api-key-btn');
+  const apiKeyInput = document.getElementById('api-key-input');
+  const apiKeyStatus = document.getElementById('api-key-status');
+  const userEmailSpan = document.getElementById('user-email');
+
+  // --- State ---
+  let allFiles = [];
+  let itemCache = {};
+  let isStopRequested = false;
+  let activeApiCallCount = 0;
+  let savePatternsDebounced;
+
+  // --- Initial Setup ---
+  loadInitialSettings();
+  checkApiKey();
+  // ★変更: デバウンス遅延時間を3000msに変更
+  savePatternsDebounced = debounce(saveCurrentFilterPatterns, 3000);
+
+  // --- Event Listeners ---
+  listFilesBtn.addEventListener('click', handleListFiles);
+  renameBtn.addEventListener('click', handleRenameFiles);
+  selectAllCheckbox.addEventListener('click', handleSelectAll);
+  
+  filterPatternsTextarea.addEventListener('input', () => {
+    applyFilterAndRender();
+    savePatternsDebounced();
+  });
+
+  folderIdInput.addEventListener('keypress', (e) => e.key === 'Enter' && handleListFiles());
+  stopAllBtn.addEventListener('click', handleStopAll);
+  // ★追加: 全サムネイル取得ボタンのイベントリスナー
+  getAllThumbnailsBtn.addEventListener('click', handleGetAllThumbnails);
+  
+  fileListBody.addEventListener('click', (event) => {
+    const target = event.target.closest('button');
+    if (!target) return;
+    
+    const fileId = target.dataset.fileId;
+    if (target.matches('.generate-btn')) getAndDisplayTitle(fileId, false);
+    else if (target.matches('.regenerate-btn')) getAndDisplayTitle(fileId, true);
+    else if (target.matches('.thumbnail-btn')) getAndDisplayThumbnail(fileId);
+  });
+
+  openSettingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+  closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+  saveApiKeyBtn.addEventListener('click', handleSaveApiKey);
+
+  // --- Functions ---
+  
+  /**
+   * ★追加: 表示されている全てのサムネイルを一括で取得する
+   */
+  function handleGetAllThumbnails() {
+    const thumbnailBtns = fileListBody.querySelectorAll('.thumbnail-btn');
+    if (thumbnailBtns.length === 0) return;
+
+    this.disabled = true;
+    this.innerHTML = `<span class="material-icons">hourglass_top</span> 取得中...`;
+
+    let i = 0;
+    const processNext = () => {
+      if (i < thumbnailBtns.length) {
+        thumbnailBtns[i].click(); // ボタンのクリックをシミュレートして取得処理を呼び出す
+        i++;
+        setTimeout(processNext, 200); // サーバー負荷軽減のため200msの間隔をあける
+      } else {
+        this.disabled = false;
+        this.innerHTML = `<span class="material-icons">collections</span> 全てのサムネイルを取得`;
+      }
+    };
+    processNext();
+  }
+
+  function displayFiles(files) {
+    fileListBody.innerHTML = '';
+    if (files.length === 0) {
+      resultsCount.textContent = '対象ファイルが見つかりませんでした。';
+      getAllThumbnailsBtn.classList.add('hidden'); // ★追加: 対象がない場合はボタンを隠す
+      return;
+    }
+    resultsCount.textContent = `${files.length}件の対象ファイルが見つかりました。`;
+    getAllThumbnailsBtn.classList.remove('hidden'); // ★追加: 対象があればボタンを表示
+
+    files.forEach(file => {
+      const row = document.createElement('tr');
+      row.dataset.fileId = file.id;
+      row.dataset.fileName = file.name;
+
+      let thumbnailHtml = '';
+      if (file.thumbnailDataUrl) {
+        thumbnailHtml = `<img src="${file.thumbnailDataUrl}" class="thumbnail-img" alt="サムネイル">`;
+      } else {
+        thumbnailHtml = `<button class="secondary-btn thumbnail-btn" data-file-id="${file.id}" title="サムネイル取得">
+                           <span class="material-icons">image</span>
+                         </button>`;
+      }
+
+      row.innerHTML = `
+        <td><input type="checkbox" class="file-checkbox" disabled></td>
+        <td class="thumbnail-cell">${thumbnailHtml}</td>
+        <td>${escapeHtml(file.name)}</td>
+        <td class="suggested-name-cell"></td>
+        <td class="action-col"><div class="action-buttons"></div></td>
+      `;
+      fileListBody.appendChild(row);
+      renderActionButtons(row, 'initial');
+    });
+    updateRenameButtonState();
+  }
+
+  // --- 以下の関数群は前回の回答から変更ありません ---
+  function getAndDisplayThumbnail(fileId) { /* ... */ }
+  function renderThumbnail(cell, dataUrl) { /* ... */ }
+  function loadInitialSettings() { /* ... */ }
+  function getAndDisplayTitle(fileId, ignoreCache = false) { /* ... */ }
+  function debounce(func, wait) { /* ... */ }
+  function saveCurrentFilterPatterns() { /* ... */ }
+  function handleListFiles() { /* ... */ }
+  function updateStopButtonVisibility() { /* ... */ }
+  function handleStopAll() { /* ... */ }
+  function renderActionButtons(row, state) { /* ... */ }
+  function updateRowWithSuggestion(row, suggestedTitle) { /* ... */ }
+  function applyFilterAndRender() { /* ... */ }
+  function extractFolderIdFromInput(input) { /* ... */ }
+  function handleRenameFiles() { /* ... */ }
+  function checkApiKey() { /* ... */ }
+  function handleSaveApiKey() { /* ... */ }
+  function handleSelectAll() { /* ... */ }
+  function updateRenameButtonState() { /* ... */ }
+  function handleCheckboxChange(event) { /* ... */ }
+  function showLoader(show, text = '') { /* ... */ }
+  function showError(message) { /* ... */ }
+  function handleFailure(error) { /* ... */ }
+  function escapeHtml(unsafe) { /* ... */ }
+
+  // (ここから、省略した関数群をペースト)
+  function getAndDisplayThumbnail(fileId) {
+    const thumbnailCell = document.querySelector(`tr[data-file-id="${fileId}"] .thumbnail-cell`);
+    if (!thumbnailCell) return;
+    thumbnailCell.innerHTML = `<div class="spinner spinner-small"></div>`;
+    google.script.run
+      .withSuccessHandler(dataUrl => {
+        if (!itemCache[fileId]) itemCache[fileId] = {};
+        itemCache[fileId].thumbnailDataUrl = dataUrl;
+        renderThumbnail(thumbnailCell, dataUrl);
+      })
+      .withFailureHandler(err => {
+        console.error('Thumbnail fetch error:', err);
+        renderThumbnail(thumbnailCell, null);
+      })
+      .getThumbnailDataUrl(fileId);
+  }
+  function renderThumbnail(cell, dataUrl) {
+    if (dataUrl) {
+      cell.innerHTML = `<img src="${dataUrl}" class="thumbnail-img" alt="サムネイル">`;
+    } else {
+      cell.innerHTML = `<div class="thumbnail-placeholder"><span class="material-icons">image_not_supported</span></div>`;
+    }
+  }
+  function loadInitialSettings() {
+    google.script.run.withSuccessHandler(email => { userEmailSpan.textContent = email; }).getUserEmail();
+    google.script.run.withSuccessHandler(prefs => {
+      folderIdInput.value = prefs.folderId || '';
+      if (prefs.filterPatterns !== null) {
+        filterPatternsTextarea.value = prefs.filterPatterns;
+      } else {
+        const defaultPatterns = ['^無題のドキュメント$', '^unnamed document$', '^新規ドキュメント$', '^\\d{4}年\\d{1,2}月\\d{1,2}日', '^\\d{8}_\\d{6}'];
+        filterPatternsTextarea.value = defaultPatterns.join('\n');
+      }
+    }).getUserPreferences();
+  }
+  function getAndDisplayTitle(fileId, ignoreCache = false) {
+    console.log(`[クライアント] getAndDisplayTitle開始: fileId=${fileId}, ignoreCache=${ignoreCache}`);
+    if (isStopRequested) { console.log('[クライアント] 緊急停止中のため処理を中断。'); return; }
+    const row = fileListBody.querySelector(`tr[data-file-id="${fileId}"]`);
+    if (!row) { console.error(`[クライアント] fileId=${fileId} に対応する行が見つかりません。`); return; }
+    if (!ignoreCache && itemCache[fileId] && itemCache[fileId].suggestedTitle) { console.log(`[クライアント] キャッシュからタイトルを取得: "${itemCache[fileId].suggestedTitle}"`); updateRowWithSuggestion(row, itemCache[fileId].suggestedTitle); return; }
+    renderActionButtons(row, 'loading');
+    activeApiCallCount++;
+    updateStopButtonVisibility();
+    const onComplete = () => { console.log(`[クライアント] API呼び出し完了 (fileId: ${fileId})`); activeApiCallCount--; updateStopButtonVisibility(); };
+    console.log(`[クライアント] google.script.run.getSuggestedTitleを呼び出します... (fileId: ${fileId})`);
+    google.script.run
+      .withSuccessHandler(suggestedTitle => {
+        console.log(`[クライアント] 成功レスポンス受信 (fileId: ${fileId}): "${suggestedTitle}"`);
+        if (isStopRequested) { console.log('[クライアント] 成功しましたが、緊急停止中のためUI更新をスキップ。'); return; }
+        if (!itemCache[fileId]) itemCache[fileId] = {};
+        itemCache[fileId].suggestedTitle = suggestedTitle;
+        updateRowWithSuggestion(row, suggestedTitle);
+        onComplete();
+      })
+      .withFailureHandler(error => {
+        console.error(`[クライアント] エラーレスポンス受信 (fileId: ${fileId}):`, error);
+        if (isStopRequested) { console.log('[クライアント] エラーですが、緊急停止中のためUI更新をスキップ。'); return; }
+        updateRowWithSuggestion(row, `(エラー: ${error.message})`);
+        onComplete();
+      })
+      .getSuggestedTitle(fileId);
+  }
+  function debounce(func, wait) { let timeout; return function(...args) { const context = this; clearTimeout(timeout); timeout = setTimeout(() => func.apply(context, args), wait); }; }
+  function saveCurrentFilterPatterns() { const patterns = filterPatternsTextarea.value; google.script.run.saveFilterPatternsOnly(patterns); }
+  function handleListFiles() {
+    const rawInput = folderIdInput.value.trim();
+    if (!rawInput) { showError('フォルダIDまたはURLを入力してください。'); return; }
+    const preferences = { folderId: rawInput, filterPatterns: filterPatternsTextarea.value };
+    google.script.run.saveUserPreferences(preferences);
+    const folderId = extractFolderIdFromInput(rawInput);
+    showLoader(true, 'フォルダ内のファイルを読み込んでいます...');
+    resultsDiv.classList.add('hidden');
+    fileListBody.innerHTML = '';
+    showError('');
+    allFiles = [];
+    itemCache = {};
+    google.script.run
+      .withSuccessHandler(files => { allFiles = files; showLoader(false); resultsDiv.classList.remove('hidden'); applyFilterAndRender(); })
+      .withFailureHandler(handleFailure)
+      .getFilesFromFolder(folderId);
+  }
+  function updateStopButtonVisibility() { stopAllBtn.classList.toggle('hidden', activeApiCallCount === 0); }
+  function handleStopAll() {
+    isStopRequested = true;
+    stopAllBtn.disabled = true;
+    stopAllBtn.innerHTML = `<span class="material-icons">pan_tool</span> 停止中...`;
+    document.querySelectorAll('.action-buttons .spinner-small').forEach(spinner => { const row = spinner.closest('tr'); if (row) renderActionButtons(row, 'stopped'); });
+    setTimeout(() => { isStopRequested = false; activeApiCallCount = 0; updateStopButtonVisibility(); stopAllBtn.disabled = false; stopAllBtn.innerHTML = `<span class="material-icons">cancel</span> 緊急停止`; }, 1000);
+  }
+  function renderActionButtons(row, state) {
+    const actionCell = row.querySelector('.action-buttons');
+    const fileId = row.dataset.fileId;
+    let html = '';
+    switch(state) {
+      case 'loading': html = `<div class="spinner spinner-small"></div>`; break;
+      case 'success': html = `<button class="icon-btn regenerate-btn" data-file-id="${fileId}" title="再生成"><span class="material-icons">refresh</span></button>`; break;
+      case 'error': case 'stopped': html = `<button class="secondary-btn generate-btn" data-file-id="${fileId}" title="生成"><span class="material-icons">auto_awesome</span></button>`; break;
+      default: html = `<button class="primary-btn generate-btn" data-file-id="${fileId}" title="生成"><span class="material-icons">auto_awesome</span></button>`;
+    }
+    actionCell.innerHTML = html;
+  }
+  function updateRowWithSuggestion(row, suggestedTitle) {
+      const suggestedNameCell = row.querySelector('.suggested-name-cell');
+      const checkbox = row.querySelector('.file-checkbox');
+      suggestedNameCell.textContent = escapeHtml(suggestedTitle);
+      row.dataset.suggestedName = suggestedTitle;
+      if (!suggestedTitle.startsWith('(')) {
+        renderActionButtons(row, 'success');
+        checkbox.disabled = false;
+        checkbox.checked = true;
+      } else {
+        renderActionButtons(row, 'error');
+        suggestedNameCell.innerHTML = `<span class="status-error">${escapeHtml(suggestedTitle)}</span>`;
+        checkbox.disabled = true;
+        checkbox.checked = false;
+      }
+      updateRenameButtonState();
+  }
+  function applyFilterAndRender() {
+    const patterns = filterPatternsTextarea.value.split('\n').filter(p => p.trim() !== '');
+    const regexes = patterns.map(p => { try { return new RegExp(p, 'i'); } catch (e) { return null; }}).filter(r => r !== null);
+    const filteredFiles = allFiles.filter(file => regexes.some(regex => regex.test(file.name)));
+    displayFiles(filteredFiles);
+  }
+  function extractFolderIdFromInput(input) { try { if (input.startsWith('http')) { const url = new URL(input); const pathParts = url.pathname.split('/'); const folderIdIndex = pathParts.indexOf('folders'); if (folderIdIndex !== -1 && pathParts.length > folderIdIndex + 1) return pathParts[folderIdIndex + 1]; } } catch (e) {} return input; }
+  function handleRenameFiles() {
+    const filesToRename = Array.from(fileListBody.querySelectorAll('tr:not(.hidden) .file-checkbox:checked')).map(cb => cb.closest('tr'));
+    if (filesToRename.length === 0) return;
+    renameBtn.disabled = true;
+    renameBtn.innerHTML = `<span class="material-icons">hourglass_top</span> リネーム中...`;
+    let promises = filesToRename.map(row => {
+      const fileId = row.dataset.fileId;
+      const newName = row.dataset.suggestedName;
+      const actionCell = row.querySelector('.action-buttons');
+      actionCell.innerHTML = `<div class="spinner spinner-small"></div>`;
+      return new Promise((resolve) => {
+        google.script.run
+          .withSuccessHandler((message) => {
+            const suggestedNameCell = row.querySelector('.suggested-name-cell');
+            suggestedNameCell.innerHTML = `<span style="color:var(--success-color); font-weight:bold;">${escapeHtml(message)}</span>`;
+            actionCell.innerHTML = ``;
+            row.querySelector('.file-checkbox').disabled = true;
+            resolve();
+          })
+          .withFailureHandler((error) => {
+            actionCell.innerHTML = `<span class="status-error">${escapeHtml(error.message)}</span>`;
+            resolve();
+          })
+          .renameFile(fileId, newName);
+      });
+    });
+    Promise.all(promises).then(() => {
+      renameBtn.disabled = false;
+      renameBtn.innerHTML = `<span class="material-icons">task_alt</span> 選択したファイルをリネーム`;
+      updateRenameButtonState();
+    });
+  }
+  function checkApiKey() { google.script.run.withSuccessHandler(key => { if (!key) showError('APIキーが設定されていません。右上の設定アイコンから登録してください。'); }).getApiKey(); }
+  function handleSaveApiKey() {
+    const apiKey = apiKeyInput.value.trim();
+    if (!apiKey) { apiKeyStatus.textContent = 'APIキーを入力してください。'; apiKeyStatus.style.color = 'var(--danger-color)'; return; }
+    saveApiKeyBtn.disabled = true;
+    apiKeyStatus.textContent = '保存中...';
+    google.script.run
+      .withSuccessHandler(response => {
+        if (response.success) {
+          apiKeyStatus.textContent = response.message;
+          apiKeyStatus.style.color = 'var(--success-color)';
+          setTimeout(() => settingsModal.classList.add('hidden'), 1500);
+          showError('');
+        } else {
+          apiKeyStatus.textContent = response.message;
+          apiKeyStatus.style.color = 'var(--danger-color)';
+        }
+        saveApiKeyBtn.disabled = false;
+      })
+      .withFailureHandler(err => {
+        apiKeyStatus.textContent = `エラー: ${err.message}`;
+        apiKeyStatus.style.color = 'var(--danger-color)';
+        saveApiKeyBtn.disabled = false;
+      })
+      .saveApiKey(apiKey);
+  }
+  function handleSelectAll() { const checkboxes = fileListBody.querySelectorAll('tr:not(.hidden) .file-checkbox:not(:disabled)'); checkboxes.forEach(cb => { cb.checked = selectAllCheckbox.checked; }); updateRenameButtonState(); }
+  function updateRenameButtonState() {
+    const anyChecked = Array.from(fileListBody.querySelectorAll('tr:not(.hidden) .file-checkbox:checked')).length > 0;
+    renameBtn.disabled = !anyChecked;
+    renameBtn.classList.toggle('disabled', !anyChecked);
+    fileListBody.removeEventListener('change', handleCheckboxChange);
+    fileListBody.addEventListener('change', handleCheckboxChange);
+  }
+  function handleCheckboxChange(event) { if (event.target.classList.contains('file-checkbox')) updateRenameButtonState(); }
+  function showLoader(show, text = '') { loader.classList.toggle('hidden', !show); loaderText.textContent = text; }
+  function showError(message) { errorMessageDiv.textContent = message; errorMessageDiv.classList.toggle('hidden', !message); }
+  function handleFailure(error) { showLoader(false); showError(error.message); }
+  function escapeHtml(unsafe) { if (typeof unsafe !== 'string') return ''; return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); }
+
+});
+</script>

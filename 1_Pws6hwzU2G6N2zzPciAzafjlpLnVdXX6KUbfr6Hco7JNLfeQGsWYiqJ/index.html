@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <title>Drive ファイル一覧書き出し</title>
+  <!-- モバイルデバイスでの表示を最適化 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+      margin: 20px;
+      line-height: 1.6;
+      background-color: #f9f9f9;
+      color: #333;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+    h1 {
+      color: #2c3e50;
+      border-bottom: 2px solid #ecf0f1;
+      padding-bottom: 10px;
+      font-size: 1.8em;
+    }
+    p, li {
+      font-size: 1em;
+      color: #555;
+    }
+    button {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 1em;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      font-weight: bold;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    button:disabled {
+      background-color: #bdc3c7;
+      cursor: not-allowed;
+    }
+    #status {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 5px;
+      background-color: #ecf0f1;
+      border: 1px solid #bdc3c7;
+      display: none; /* 初期状態では非表示 */
+      word-wrap: break-word;
+    }
+    #status.success {
+      background-color: #e8f5e9; /* 緑色系 */
+      border-color: #a5d6a7;
+    }
+    #status.error {
+      background-color: #ffebee; /* 赤色系 */
+      border-color: #ef9a9a;
+      color: #c62828;
+    }
+    #status.processing {
+      background-color: #e3f2fd; /* 青色系 */
+      border-color: #90caf9;
+      color: #1565c0;
+    }
+    #spreadsheet-info {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #fafafa;
+      border: 1px solid #eee;
+      border-radius: 5px;
+    }
+    #spreadsheet-info h2 {
+      margin-top: 0;
+      font-size: 1.2em;
+    }
+    #spreadsheet-info p {
+      margin: 5px 0;
+      font-size: 0.9em;
+    }
+    #spreadsheet-info a {
+      color: #3498db;
+      text-decoration: none;
+    }
+    #spreadsheet-info a:hover {
+      text-decoration: underline;
+    }
+    .loader {
+      display: inline-block;
+      border: 4px solid #f3f3f3;
+      border-radius: 50%;
+      border-top: 4px solid #3498db;
+      width: 16px;
+      height: 16px;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    /* プログレスバー */
+    .progress-bar-container {
+      width: 100%;
+      background-color: #ecf0f1;
+      border-radius: 5px;
+      margin-top: 10px;
+      display: none; /* 初期状態では非表示 */
+      overflow: hidden; /* 角丸を効かせるため */
+    }
+    .progress-bar {
+      width: 0%;
+      height: 20px;
+      background-color: #3498db;
+      text-align: center;
+      line-height: 20px;
+      color: white;
+      font-size: 0.8em;
+      font-weight: bold;
+      transition: width 0.4s ease, background-color 0.4s ease;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Google Drive ファイル一覧書き出し</h1>
+    
+    <div id="spreadsheet-info">
+      <!-- ここにスプレッドシート情報が動的に挿入されます -->
+      <p id="info-loader"><span class="loader"></span>書き出し先スプレッドシートの情報を読み込み中...</p>
+    </div>
+
+    <p style="margin-top: 20px;">
+      このツールは、あなたのGoogle Driveアカウント内の特定の種類のファイルを検索し、上記のスプレッドシートに一覧として書き出します。
+    </p>
+    <p>
+      <b>処理内容:</b>
+      実行日の日付（例: `2025-11-08`）で新しいシートが作成され（既存の場合はクリアされます）、そこにファイル情報が書き込まれます。処理完了後、シートは日付の新しい順（降順）に自動で並び替えられます。
+    </p>
+    <p>
+      <b>対象ファイル:</b>
+      📄 Google ドキュメント, 📊 Google スライド, 📑 PDF, 📃 Word (.doc, .docx), 📈 PowerPoint (.ppt, .pptx), ✍️ テキスト (.txt), ✍️ マークダウン (.md)
+    </p>
+
+    <button id="runButton" onclick="startProcess()">ファイル一覧の書き出し実行</button>
+    
+    <div id="status"></div>
+    <div class="progress-bar-container" id="progress-container">
+      <div class="progress-bar" id="progress-bar">0%</div>
+    </div>
+  </div>
+
+  <script>
+    const runButton = document.getElementById('runButton');
+    const statusDiv = document.getElementById('status');
+    const infoDiv = document.getElementById('spreadsheet-info');
+    const infoLoader = document.getElementById('info-loader');
+    const progressBarContainer = document.getElementById('progress-container');
+    const progressBar = document.getElementById('progress-bar');
+
+    /**
+     * ページの読み込み完了時にスプレッドシート情報を取得
+     */
+    window.onload = function() {
+      google.script.run
+        .withSuccessHandler(displaySpreadsheetInfo)
+        .withFailureHandler(displayInfoError)
+        .getSpreadsheetInfo();
+    };
+
+    /**
+     * スプレッドシート情報の表示
+     */
+    function displaySpreadsheetInfo(info) {
+      if (info) {
+        infoLoader.style.display = 'none'; // ローダーを非表示
+        infoDiv.innerHTML = `
+          <h2>書き出し先スプレッドシート</h2>
+          <p><strong>ファイル名:</strong> <a href="${info.url}" target="_blank">${escapeHTML(info.name)}</a></p>
+          <p><strong>オーナー:</strong> ${escapeHTML(info.owner)}</p>
+          <p><strong>作成日:</strong> ${info.created}</p>
+          <p><strong>最終更新日:</strong> ${info.updated}</p>
+        `;
+      } else {
+        infoLoader.innerHTML = '書き出し先スプレッドシートはまだ作成されていません。初回実行時に自動作成されます。';
+      }
+    }
+
+    /**
+     * スプレッドシート情報取得エラー
+     */
+    function displayInfoError(error) {
+      infoLoader.style.color = '#c62828';
+      infoLoader.innerHTML = `スプレッドシート情報の取得に失敗しました: ${error.message}`;
+    }
+
+    /**
+     * メイン処理の開始 (ボタンクリック)
+     */
+    function startProcess() {
+      setButtonLoading(true, "処理準備中...");
+      updateStatus("処理の準備を開始しました...", "processing");
+      hideProgress(); // プログレスバーをリセット
+
+      google.script.run
+        .withSuccessHandler(handleProcessResponse)
+        .withFailureHandler(handleError)
+        .startProcessing(); // Code.gs の startProcessing を呼び出す
+    }
+    
+    /**
+     * サーバーからの応答を処理 (startProcessing または processNextPage)
+     */
+    function handleProcessResponse(response) {
+      if (response.status === "error") {
+        handleError(response); // エラーオブジェクトとして処理
+        return;
+      }
+
+      updateStatus(response.message, response.status);
+      
+      // v3 では totalFiles が不明なため、processedCount のみで進捗を表示
+      updateProgress(response.metaData.processedCount, -1); // totalFiles = -1
+
+      if (response.status === "processing") {
+        setButtonLoading(true, `処理中... (${response.metaData.processedCount} 件完了)`);
+        
+        // 次のページの処理をリクエスト
+        google.script.run
+          .withSuccessHandler(handleProcessResponse)
+          .withFailureHandler(handleError)
+          .processNextPage(response.metaData); // metaData をそのまま渡す
+      
+      } else if (response.status === "success") {
+        // 処理完了
+        setButtonLoading(false);
+        // 完了ステータスを渡す (-2: 1件以上完了, 0: 0件完了)
+        updateProgress(response.metaData.processedCount, response.metaData.processedCount > 0 ? -2 : 0);
+        // スプレッドシート情報を更新
+        google.script.run.withSuccessHandler(displaySpreadsheetInfo).getSpreadsheetInfo();
+      }
+    }
+
+    /**
+     * 汎用エラーハンドラ
+     */
+    function handleError(error) {
+      const errorMessage = (error && error.message) ? error.message : "不明なエラーが発生しました。";
+      updateStatus(`エラー: ${errorMessage}`, "error");
+      setButtonLoading(false);
+      hideProgress(true); // エラー時はプログレスバーをリセット
+    }
+
+    /**
+     * ステータスメッセージの更新
+     */
+    function updateStatus(message, statusType) {
+      statusDiv.style.display = 'block';
+      statusDiv.className = statusType; // 'success', 'error', 'processing'
+      statusDiv.innerHTML = escapeHTML(message);
+    }
+
+    /**
+     * 実行ボタンの状態を更新
+     */
+    function setButtonLoading(isLoading, message = "ファイル一覧の書き出し実行") {
+      runButton.disabled = isLoading;
+      
+      if (isLoading) {
+        runButton.innerHTML = `<span class="loader"></span> ${escapeHTML(message)}`;
+      } else {
+        runButton.innerHTML = escapeHTML(message);
+      }
+    }
+
+    /**
+     * プログレスバーの表示を更新
+     * @param {number} processed 処理済み件数
+     * @param {number} total 総数 (-1: V3処理中, -2: V3 1件以上完了, 0: V3 0件完了)
+     */
+    function updateProgress(processed, total) {
+      progressBarContainer.style.display = 'block';
+
+      if (total === -1) {
+        // Drive API v3 モード (処理中)
+        progressBar.style.width = '100%';
+        progressBar.textContent = `${processed} 件書き込み完了...`;
+        progressBar.style.backgroundColor = '#5bc0de'; // 水色 (処理中)
+      } else if (total === -2) {
+        // Drive API v3 モード (1件以上完了)
+        progressBar.style.width = '100%';
+        progressBar.textContent = `完了 (${processed} 件)`;
+        progressBar.style.backgroundColor = '#5cb85c'; // 緑色 (成功)
+      } else if (total === 0 && processed === 0) {
+        // 対象ファイル 0 件の場合 (total = 0)
+        progressBar.style.width = '100%';
+        progressBar.textContent = `完了 (0 件)`;
+        progressBar.style.backgroundColor = '#5cb85c'; // 緑色 (成功)
+      } else if (total > 0) {
+        // (旧ロジック: v2 用 - v3 では通常通らない)
+        const percent = Math.round((processed / total) * 100);
+        progressBar.style.width = percent + '%';
+        progressBar.textContent = `${percent}% (${processed}/${total})`;
+        progressBar.style.backgroundColor = '#3498db'; // 青色 (デフォルト)
+      }
+    }
+
+    /**
+     * プログレスバーを非表示/リセット
+     * @param {boolean} [isError=false] エラーによるリセットか
+     */
+    function hideProgress(isError = false) {
+      if (isError) {
+        progressBarContainer.style.display = 'block';
+        progressBar.style.width = '100%';
+        progressBar.textContent = 'エラー';
+        progressBar.style.backgroundColor = '#d9534f'; // 赤色 (エラー)
+      } else {
+        // 実行開始時に呼ばれる場合
+        progressBarContainer.style.display = 'none';
+        progressBar.style.width = '0%';
+        progressBar.textContent = '0%';
+        progressBar.style.backgroundColor = '#3498db'; // 青色 (デフォルト)
+      }
+    }
+
+    /**
+     * HTMLエスケープ
+     */
+    function escapeHTML(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>

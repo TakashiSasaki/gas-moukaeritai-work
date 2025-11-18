@@ -1,0 +1,19 @@
+{
+  "name": "Googleドライブ内文書一覧",
+  "id": "1_Pws6hwzU2G6N2zzPciAzafjlpLnVdXX6KUbfr6Hco7JNLfeQGsWYiqJ",
+  "url": "https://script.google.com/d/1_Pws6hwzU2G6N2zzPciAzafjlpLnVdXX6KUbfr6Hco7JNLfeQGsWYiqJ/edit?usp=drivesdk",
+  "lastUpdated": "2025-11-08T02:52:34.749Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbxvla1TFBCxMc-pwNtur6vPRYXQeijTdaQGKGRuJ5A",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbwefkE_shQ5fBiQweCvLuFKflh5a5FjJprLQwQtv59PGzZNsEc3poqgtaBilJBKZ-KI",
+      "target": "1",
+      "description": ""
+    }
+  ]
+}

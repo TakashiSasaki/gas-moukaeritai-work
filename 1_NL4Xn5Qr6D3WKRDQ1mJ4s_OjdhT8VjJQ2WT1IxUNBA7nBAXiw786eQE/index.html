@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <title>不適切タイトル判定ツール</title>
+  <!-- Tailwind CSS を読み込み、モダンなUIを実現します -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Interフォントファミリーを適用 */
+    body { 
+      font-family: 'Inter', sans-serif; 
+    }
+    /* 結果表示エリアのスタイル */
+    #results pre {
+      white-space: pre-wrap; /* 結果を折り返して表示 */
+      word-break: break-all; /* 長いタイトルでレイアウトが崩れないように */
+    }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-800 p-4 md:p-8">
+
+  <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
+    <h1 class="text-2xl font-bold mb-4">不適切タイトル判定ツール</h1>
+    <p class="text-gray-600 mb-6">判定したいファイルタイトルを1行に1つずつ入力してください。</p>
+
+    <div class="space-y-4">
+      <!-- タイトル入力エリア -->
+      <div>
+        <label for="titlesInput" class="block text-sm font-medium text-gray-700">判定対象タイトル (改行区切り)</label>
+        <textarea id="titlesInput" rows="10" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2" placeholder="無題のドキュメント\nhttps://youtu.be/...\nREADME.md\nRANSACについて説明してください。"></textarea>
+      </div>
+      
+      <div class="flex flex-wrap gap-4 items-center">
+        <!-- LLM使用チェックボックス -->
+        <div class="flex items-center">
+          <input id="useLLM" type="checkbox" checked class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+          <label for="useLLM" class="ml-2 block text-sm text-gray-900">ステップ3 (LLM判定) を実行する</label>
+        </div>
+        
+        <!-- モデル選択ドロップダウン -->
+        <div>
+          <label for="modelName" class="sr-only">モデル</label>
+          <select id="modelName" class="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+            <!-- judge_llm_titles.js の DEFAULT_MODEL と合わせます -->
+            <option value="models/gemini-2.5-flash-preview-09-2025" selected>Gemini 2.5 Flash</option>
+            <option value="models/gemma-3-27b-it">Gemma 3 27B</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 実行ボタン -->
+      <button id="runButton" class="w-full inline-flex justify-center rounded-md border border-transparent bg-blue-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+        判定実行
+      </button>
+    </div>
+
+    <!-- 結果表示エリア -->
+    <div class="mt-8">
+      <h2 class="text-lg font-medium text-gray-900">判定結果</h2>
+      <!-- ローディング表示 -->
+      <div id="loading" class="mt-2 text-gray-500" style="display: none;">
+        判定を実行中です... (LLM判定にはタイトル1件あたり数秒かかります)
+      </div>
+      <!-- 結果本体 -->
+      <div id="results" class="mt-4 bg-gray-50 rounded-md p-4 border border-gray-200">
+        <pre class="text-sm text-gray-400">結果はここに表示されます。</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- クライアントサイド スクリプト -->
+  <script>
+    // 実行ボタンにクリックイベントリスナーを追加
+    document.getElementById('runButton').addEventListener('click', runJudge);
+
+    /**
+     * 判定実行ボタンが押されたときの処理
+     */
+    function runJudge() {
+      const button = document.getElementById('runButton');
+      const loading = document.getElementById('loading');
+      const resultsDiv = document.getElementById('results');
+
+      // フォームから入力値を取得
+      const titlesString = document.getElementById('titlesInput').value;
+      const useLLM = document.getElementById('useLLM').checked;
+      const modelName = document.getElementById('modelName').value;
+
+      // 入力が空の場合は処理しない
+      if (!titlesString.trim()) {
+        resultsDiv.innerHTML = '<pre class="text-red-500">判定対象のタイトルを入力してください。</pre>';
+        return;
+      }
+
+      // 実行中はボタンを無効化し、ローディング表示をオン
+      button.disabled = true;
+      button.textContent = '判定中...';
+      loading.style.display = 'block';
+      resultsDiv.innerHTML = '<pre>判定を実行中です...</pre>';
+
+      // google.script.run を使ってサーバーサイド (doGet.gs) の関数を呼び出す
+      google.script.run
+        .withSuccessHandler(showResults) // 成功時は showResults を呼び出す
+        .withFailureHandler(showError)   // 失敗時は showError を呼び出す
+        .judgeTitlesWrapper(titlesString, useLLM, modelName);
+    }
+
+    /**
+     * 判定成功時のコールバック関数
+     * @param {Array<object>} results - サーバーから返された判定結果オブジェクトの配列
+     */
+    function showResults(results) {
+      const resultsDiv = document.getElementById('results');
+      let html = '';
+
+      if (results.length === 0) {
+        html = '<pre class="text-gray-400">判定対象がありませんでした。</pre>';
+      }
+
+      // 結果をループしてHTMLを生成
+      results.forEach(result => {
+        let statusText;
+        let colorClass;
+
+        if (result.isBad === true) {
+          statusText = `不適切 (類型: ${result.type}, Step: ${result.judgedByStep})`;
+          colorClass = "text-red-600"; // 不適切 = 赤
+        } else if (result.isBad === false) {
+          statusText = `適切 (Type: ${result.type}, Step: ${result.judgedByStep})`;
+          colorClass = "text-green-600"; // 適切 = 緑
+        } else {
+          // isBad === null (判定不明)
+          statusText = `判定不明 (Reason: ${result.type}, Step: ${result.judgedByStep})`;
+          colorClass = "text-yellow-600"; // 判定不明 = 黄
+        }
+        
+        html += `<div class="mb-2 border-b pb-2">\n`;
+        html += `  <pre class="font-bold">${escapeHTML(result.title)}</pre>\n`; // タイトル
+        html += `  <pre class="text-sm ${colorClass}"> -> ${statusText}</pre>\n`; // 判定結果
+        html += `</div>`;
+      });
+
+      resultsDiv.innerHTML = html;
+      resetButton(); // ボタンの状態を元に戻す
+    }
+
+    /**
+     * 判定失敗時のコールバック (GAS実行エラーなど)
+     * @param {Error} error
+     */
+    function showError(error) {
+      document.getElementById('results').innerHTML = `<pre class="text-red-600">GAS実行エラーが発生しました: ${error.message}</pre>`;
+      resetButton();
+    }
+
+    /**
+     * ボタンとローディング表示をリセットします
+     */
+    function resetButton() {
+      const button = document.getElementById('runButton');
+      const loading = document.getElementById('loading');
+      button.disabled = false;
+      button.textContent = '判定実行';
+      loading.style.display = 'none';
+    }
+
+    /**
+     * 結果表示のための簡易HTMLエスケープ関数
+     */
+    function escapeHTML(str) {
+      if (typeof str !== 'string') return '';
+      return str.replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+    }
+  </script>
+
+</body>
+</html>

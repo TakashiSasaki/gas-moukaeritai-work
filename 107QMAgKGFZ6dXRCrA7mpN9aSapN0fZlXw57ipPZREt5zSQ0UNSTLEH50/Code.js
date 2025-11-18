@@ -2,14 +2,38 @@
 
 /**
  * WebアプリとしてアクセスされたときにHTMLを返すメイン関数。
- * 初期データを含めずにHTMLテンプレートのみを返すように変更。
+ * URLパラメータに応じて表示するページを切り替える。
+ * @param {Object} e - イベントオブジェクト
  */
 function doGet(e) {
+  // URLパラメータ 'page' の値を確認
+  if (e.parameter.page === 'readme-ja') {
+    return HtmlService.createHtmlOutputFromFile('readme-ja.html')
+      .setTitle('Package Viewer アプリの使い方');
+  }
+  
+  if (e.parameter.page === 'readme-en') {
+    return HtmlService.createHtmlOutputFromFile('readme-en.html')
+      .setTitle('How to use Package Viewer App');
+  }
+
+  // 'page'パラメータがない場合は、メインのWebアプリを表示
   const userEmail = Session.getActiveUser().getEmail();
   const template = HtmlService.createTemplateFromFile('Index');
-  // deviceDataを渡さず、userEmailのみを設定
   template.userEmail = userEmail;
-  const htmlOutput = template.evaluate().setTitle('Android Package List Viewer');
+  
+  const faviconUrl = "https://raw.githubusercontent.com/TakashiSasaki/gas-moukaeritai-work/9890c2e25e742e4554e1a4da0fdc25c9d8a11b74/107QMAgKGFZ6dXRCrA7mpN9aSapN0fZlXw57ipPZREt5zSQ0UNSTLEH50/image.png";
+  
+  // ▼▼▼ ここから変更 ▼▼▼
+  // faviconUrlをテンプレートに渡す
+  template.faviconUrl = faviconUrl;
+  // ▲▲▲ ここまで変更 ▲▲▲
+
+  const htmlOutput = template.evaluate()
+    .setTitle('Android Package List Viewer')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1.0')
+    .setFaviconUrl(faviconUrl); // この行でfaviconを指定
+    
   return htmlOutput;
 }
 
@@ -34,7 +58,6 @@ function getLatestPackageData(email) {
   const cacheKey = 'aggregated_package_data';
   const CACHE_EXPIRATION_SECONDS = 21600; // 6時間
 
-  // 1. まずキャッシュの存在を確認
   try {
     const cachedResult = cache.get(cacheKey);
     if (cachedResult != null) {
@@ -45,10 +68,9 @@ function getLatestPackageData(email) {
     Logger.log('Could not read from cache: ' + e.message);
   }
 
-  // 2. キャッシュがない場合のみ、Gmailを検索
   Logger.log('Cache miss. Fetching data from Gmail.');
   const searchQuery = `to:${email} from:${email} subject:'Android package list'`;
-  const aggregatedData = {}; // { "モデル名": { androidId: "...", packages: Set(...) } }
+  const aggregatedData = {};
 
   try {
     const threads = GmailApp.search(searchQuery, 0, 5);
@@ -90,7 +112,6 @@ function getLatestPackageData(email) {
       };
     });
 
-    // 3. 処理結果をキャッシュに保存
     try {
       const dataToCache = JSON.stringify(results);
       if (dataToCache.length < 100 * 1024) {
@@ -107,6 +128,6 @@ function getLatestPackageData(email) {
 
   } catch (gasError) {
     Logger.log(`GAS Execution Error: ${gasError.message}`);
-    return []; // エラー時は空の配列を返す
+    return [];
   }
 }

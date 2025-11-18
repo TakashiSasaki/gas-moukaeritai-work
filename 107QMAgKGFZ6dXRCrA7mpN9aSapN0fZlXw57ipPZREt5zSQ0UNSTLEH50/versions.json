@@ -5,10 +5,26 @@
   },
   {
     "version": 2,
-    "description": "No description"
+    "description": "公開用 v2"
   },
   {
     "version": 3,
     "description": "公開用 v3"
+  },
+  {
+    "version": 4,
+    "description": "公開用 v4"
+  },
+  {
+    "version": 5,
+    "description": "公開用 v5"
+  },
+  {
+    "version": 6,
+    "description": "公開用 v6"
+  },
+  {
+    "version": 7,
+    "description": "公開用 v7"
   }
 ]

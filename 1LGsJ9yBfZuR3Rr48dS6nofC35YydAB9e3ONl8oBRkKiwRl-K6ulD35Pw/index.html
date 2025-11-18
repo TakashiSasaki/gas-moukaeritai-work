@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+    }
+
+    #controls {
+      margin-bottom: 15px;
+    }
+
+    #fileIdInput {
+      width: 300px;
+      padding: 5px;
+    }
+
+    #browseButton {
+      margin-left: 5px;
+      padding: 5px 10px;
+    }
+
+    #extractButton {
+      padding: 5px 10px;
+    }
+
+    #status {
+      color: #888;
+    }
+
+    #result {
+      width: 90%;
+      height: 400px;
+      border: 1px solid #ccc;
+      padding: 10px;
+      white-space: pre-wrap;
+      overflow-y: auto;
+      background-color: #f9f9f9;
+    }
+
+    #filePicker {
+      display: none;
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-top: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      background-color: #fafafa;
+    }
+
+    #pickerNavigation {
+      margin-bottom: 10px;
+      padding-bottom: 5px;
+      border-bottom: 1px solid #eee;
+    }
+
+    #pickerNavigation button {
+      margin-right: 5px;
+    }
+
+    #pickerStatus {
+      color: #888;
+      font-style: italic;
+    }
+
+    #pickerList {
+      list-style-type: none;
+      padding-left: 0;
+      margin-top: 5px;
+    }
+
+    #pickerList li {
+      padding: 4px;
+      cursor: pointer;
+      border-radius: 3px;
+    }
+
+    #pickerList li:hover {
+      background-color: #eee;
+    }
+
+    #pickerList li.file {
+      font-weight: bold;
+      color: #333;
+    }
+
+    #pickerList li.folder {
+      color: #005a9c;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>Markdown 抽出ツール</h2>
+
+  <div id="controls">
+    <label for="fileIdInput">ファイルID:</label>
+    <input type="text" id="fileIdInput" placeholder="Google DriveのファイルIDを入力">
+    <button id="browseButton" onclick="togglePicker()">ファイル選択...</button>
+    <button id="extractButton" onclick="extractMarkdown()">抽出実行</button>
+  </div>
+
+  <div id="filePicker">
+    <div id="pickerNavigation">
+      <button id="navRootBtn" onclick="loadFolderContents('root')">ルート</button>
+      <button id="navUpBtn" onclick="loadParentFolder()">一つ上へ</button>
+      <span id="currentFolderName" style="font-weight: bold;"></span>
+    </div>
+    <div id="pickerStatus"></div>
+    <ul id="pickerList"></ul>
+  </div>
+
+  <div id="status">ここにステータスが表示されます...</div>
+  <pre id="result">ここに抽出結果が表示されます...</pre>
+
+  <script>
+    // --- UI要素 ---
+      const fileIdInput = document.getElementById('fileIdInput');
+      const statusEl = document.getElementById('status');
+      const resultEl = document.getElementById('result');
+      const extractButton = document.getElementById('extractButton');
+      const browseButton = document.getElementById('browseButton');
+      const pickerEl = document.getElementById('filePicker');
+      const pickerListEl = document.getElementById('pickerList');
+      const pickerStatusEl = document.getElementById('pickerStatus');
+      const currentFolderNameEl = document.getElementById('currentFolderName');
+      const navUpBtn = document.getElementById('navUpBtn');
+      // const navRefreshBtn = ... 削除
+
+      // --- ピッカーの状態管理 ---
+      let parentFolderId = null;
+      // let currentLoadedFolderId = null; 削除
+
+/**
+       * ファイルピッカーの表示/非表示を切り替えます。
+       * (1回目のクリックで動作するように修正)
+       */
+      function togglePicker() {
+        // 現在のスタイルが 'block' でない場合 (='none' または 初期値 '') は、表示する
+        if (pickerEl.style.display !== 'block') {
+          pickerEl.style.display = 'block';
+          // 最初にルートフォルダをロード (引数 'root' は Code.gs 側で処理)
+          loadFolderContents('root'); 
+        } else {
+          // すでに表示されている場合は非表示にする
+          pickerEl.style.display = 'none';
+        }
+      }
+
+      /**
+       * サーバーからフォルダコンテンツをロードします。
+       */
+      function loadFolderContents(folderId) {
+        if (!folderId) return;
+        
+        pickerStatusEl.textContent = 'フォルダ内容をロード中...';
+        pickerListEl.innerHTML = '';
+        setPickerLoading(true);
+
+        // getFolderContents を呼び出す (キャッシュなし)
+        google.script.run
+          .withSuccessHandler(updatePickerUI)
+          .withFailureHandler(onPickerFailure)
+          .getFolderContents(folderId);
+      }
+
+      /**
+       * フォルダコンテンツのロードが成功したときのコールバック
+       */
+      function updatePickerUI(data) {
+        setPickerLoading(false);
+        pickerStatusEl.textContent = '';
+        pickerListEl.innerHTML = ''; 
+        
+        if (data.error) {
+          pickerStatusEl.textContent = data.error;
+          return;
+        }
+
+        // 親フォルダIDのみ更新
+        currentFolderNameEl.textContent = data.currentFolder.name;
+        parentFolderId = data.parentFolder ? data.parentFolder.id : null;
+        
+        navUpBtn.disabled = (parentFolderId === null);
+
+        // 1. サブフォルダをリストに追加
+        data.folders.forEach(folder => {
+          const li = document.createElement('li');
+          li.className = 'folder';
+          li.textContent = `📁 ${folder.name}`;
+          li.onclick = () => loadFolderContents(folder.id);
+          pickerListEl.appendChild(li);
+        });
+
+        // 2. ファイルをリストに追加
+        data.files.forEach(file => {
+          const li = document.createElement('li');
+          li.className = 'file';
+          const ext = file.mimeType.split('.').pop();
+          li.textContent = `📄 ${file.name} (${ext})`;
+          li.onclick = () => selectFile(file.id, file.name);
+          pickerListEl.appendChild(li);
+        });
+
+        if (data.folders.length === 0 && data.files.length === 0) {
+          pickerStatusEl.textContent = 'このフォルダは空です。';
+        }
+      }
+      
+      /**
+       * ピッカーのローディング状態を設定
+       */
+      function setPickerLoading(isLoading) {
+         document.getElementById('navRootBtn').disabled = isLoading;
+         // navRefreshBtn.disabled = isLoading; 削除
+         navUpBtn.disabled = isLoading || (parentFolderId === null);
+      }
+
+      /**
+       * 「一つ上へ」ボタンの処理
+       */
+      function loadParentFolder() {
+        if (parentFolderId) {
+          loadFolderContents(parentFolderId);
+        }
+      }
+
+      // function refreshCurrentFolder() { ... } 削除
+
+      /**
+       * フォルダコンテンツのロードが失敗したときのコールバック
+       */
+      function onPickerFailure(error) {
+        setPickerLoading(false);
+        pickerStatusEl.textContent = 'エラー: ' + error.message;
+      }
+
+      /**
+       * ファイルが選択されたときの処理
+       */
+      function selectFile(fileId, fileName) {
+        fileIdInput.value = fileId;
+        statusEl.textContent = `ファイル「${fileName}」が選択されました。`;
+        pickerEl.style.display = 'none';
+      }
+      
+      // --- 抽出実行のロジック ---
+
+      /**
+       * 抽出ボタンがクリックされたときに実行されます。
+       */
+      function extractMarkdown() {
+        const fileId = fileIdInput.value;
+        if (!fileId) {
+          statusEl.textContent = 'エラー: ファイルIDを入力してください。';
+          return;
+        }
+
+        statusEl.textContent = 'サーバーで処理中...';
+        resultEl.textContent = ''; 
+        extractButton.disabled = true;
+        browseButton.disabled = true;
+
+        google.script.run
+          .withSuccessHandler(onSuccess)
+          .withFailureHandler(onFailure)
+          .callExtractMarkdown(fileId);
+      }
+
+      /**
+       * サーバーサイドの処理が成功した場合のコールバック
+       */
+      function onSuccess(markdownText) {
+        resultEl.textContent = markdownText;
+        statusEl.textContent = '処理が完了しました。';
+        extractButton.disabled = false;
+        browseButton.disabled = false;
+      }
+
+      /**
+       * サーバーサイドの処理が失敗した場合のコールバック
+       */
+      function onFailure(error) {
+        statusEl.textContent = 'エラーが発生しました: ' + error.message;
+        extractButton.disabled = false;
+        browseButton.disabled = false;
+      }
+  </script>
+</body>
+
+</html>

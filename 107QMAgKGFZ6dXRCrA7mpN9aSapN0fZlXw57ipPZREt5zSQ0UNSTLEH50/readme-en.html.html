@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How to use Package Viewer App</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+      line-height: 1.7;
+      color: #333;
+      background-color: #f9f9f9;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 20px 40px;
+    }
+    h1, h2, h3 {
+      border-bottom: 1px solid #eee;
+      padding-bottom: 10px;
+    }
+    h1 { font-size: 2em; }
+    h2 { font-size: 1.5em; }
+    h3 { font-size: 1.2em; }
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      background-color: #f0f0f0;
+      padding: .2em .4em;
+      margin: 0;
+      font-size: 85%;
+      border-radius: 3px;
+    }
+    pre {
+      background-color: #f0f0f0;
+      padding: 16px;
+      overflow: auto;
+      border-radius: 3px;
+    }
+    pre code {
+      padding: 0;
+      margin: 0;
+      font-size: 100%;
+      background-color: transparent;
+    }
+    strong {
+      color: #c0392b;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>How to use Package Viewer App (README)</h1>
+
+    <h2>Overview</h2>
+    <p>This web application is a tool to display and manage the list of package names of apps installed on your Android device.<br>
+    To register data with the app, you need to send an email in a specific format to your own Gmail account.</p>
+
+    <h2>Email Requirements</h2>
+    <p>For the app to correctly recognize the data, please send the email according to the following rules.</p>
+
+    <h3>1. To</h3>
+    <p>Your own Gmail address (e.g., <code>xxxx@gmail.com</code>)</p>
+
+    <h3>2. From</h3>
+    <p>Your own Gmail address (e.g., <code>xxxx@gmail.com</code>)</p>
+
+    <h3>3. Subject</h3>
+    <p><strong><code>Android package list</code></strong><br>
+    This subject must be an exact match. It is case-sensitive.</p>
+
+    <h3>4. Body</h3>
+    <p>The body of the email must contain <strong>only the JSON data</strong> in the following format. Do not include any extra greetings or signatures.</p>
+    
+    <h4>JSON Format:</h4>
+    <pre><code>[
+  "Device Model Name",
+  "Android ID",
+  [
+    "package.name.1",
+    "package.name.2",
+    "package.name.3",
+    ...
+  ]
+]</code></pre>
+
+    <h4>Description of each element:</h4>
+    <ul>
+      <li><strong><code>Device Model Name</code> (String):</strong> An arbitrary name to identify the data. e.g., <code>"Pixel 8"</code>, <code>"Galaxy S24"</code></li>
+      <li><strong><code>Android ID</code> (String):</strong> The unique ID of the device.</li>
+      <li><strong><code>Package Name List</code> (Array of strings):</strong> A list of package names of the installed apps.</li>
+    </ul>
+
+    <h2>Specific Email Example</h2>
+    <p><strong>Subject:</strong></p>
+    <pre><code>Android package list</code></pre>
+    <p><strong>Body:</strong></p>
+    <pre><code>[
+  "Pixel 8 Pro",
+  "1234567890abcdef",
+  [
+    "com.android.chrome",
+    "com.google.android.gm",
+    "com.google.android.apps.maps",
+    "com.google.android.youtube"
+  ]
+]</code></pre>
+
+    <h2>Recommended Data Submission Method</h2>
+    <p>While it is possible to create and send emails manually, it is recommended to link with the <strong>Automate</strong> app to automatically retrieve the necessary information and send it in the correct format.<br>
+    Please download and use the corresponding community flow from the link provided in the app's footer.</p>
+  </div>
+</body>
+</html>
