@@ -1,5 +1,11 @@
 [
   {
+    "name": "Docsタイトル提案アドイン",
+    "id": "1jdrz76e6DCQI4bmZAqlkRhM8uMjvycSr8MfNE1AFEpNk3IDjwyw4i0Rc",
+    "url": "https://script.google.com/d/1jdrz76e6DCQI4bmZAqlkRhM8uMjvycSr8MfNE1AFEpNk3IDjwyw4i0Rc/edit?usp=drivesdk",
+    "lastUpdated": "2025-12-16T03:35:34.596Z"
+  },
+  {
     "name": "Web Clip Stash",
     "id": "1qBif_0AXBT0X8-joKtQlP1ZRlrpcGTOuqOSWLpONoHkl21FhDoICeSWM",
     "url": "https://script.google.com/d/1qBif_0AXBT0X8-joKtQlP1ZRlrpcGTOuqOSWLpONoHkl21FhDoICeSWM/edit?usp=drivesdk",
@@ -28,12 +34,6 @@
     "id": "1LGsJ9yBfZuR3Rr48dS6nofC35YydAB9e3ONl8oBRkKiwRl-K6ulD35Pw",
     "url": "https://script.google.com/d/1LGsJ9yBfZuR3Rr48dS6nofC35YydAB9e3ONl8oBRkKiwRl-K6ulD35Pw/edit?usp=drivesdk",
     "lastUpdated": "2025-11-05T04:00:43.297Z"
-  },
-  {
-    "name": "Docsタイトル提案アドイン",
-    "id": "1jdrz76e6DCQI4bmZAqlkRhM8uMjvycSr8MfNE1AFEpNk3IDjwyw4i0Rc",
-    "url": "https://script.google.com/d/1jdrz76e6DCQI4bmZAqlkRhM8uMjvycSr8MfNE1AFEpNk3IDjwyw4i0Rc/edit?usp=drivesdk",
-    "lastUpdated": "2025-10-14T03:32:25.496Z"
   },
   {
     "name": "read-only-datastore-admin",
