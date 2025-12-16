@@ -29,13 +29,62 @@ function onHomepage(e) {
   
   section.addWidget(
     CardService.newTextButton()
-      .setText('タイトル案を生成')
+      .setText('タイトル案を生成（選択）')
       .setTextButtonStyle(CardService.TextButtonStyle.FILLED)
       .setOnClickAction(action)
   );
 
+  // 「お任せ」ボタン
+  // ボタンを押すと quickApplyAction 関数を実行する
+  const quickAction = CardService.newAction().setFunctionName('quickApplyAction');
+
+  section.addWidget(
+    CardService.newTextButton()
+      .setText('お任せでタイトルを適用')
+      .setTextButtonStyle(CardService.TextButtonStyle.FILLED)
+      .setOnClickAction(quickAction)
+  );
+
   card.addSection(section);
   return card.build();
+}
+
+/**
+ * 「お任せ」ボタンが押されたときのアクション
+ * Gemini APIを呼び出し、生成されたタイトルを即座に適用する
+ */
+function quickApplyAction(e) {
+  try {
+    const doc = DocumentApp.getActiveDocument();
+    if (!doc) {
+      return CardService.newActionResponseBuilder()
+        .setNotification(CardService.newNotification().setText('ドキュメントが開かれていません'))
+        .build();
+    }
+    
+    const text = doc.getBody().getText();
+    if (!text || text.trim().length === 0) {
+      return CardService.newActionResponseBuilder()
+        .setNotification(CardService.newNotification().setText('ドキュメントが空です'))
+        .build();
+    }
+
+    // Gemini API呼び出し (1つだけ生成)
+    const titles = callGeminiApi(text.substring(0, 30000), 1);
+    const newTitle = titles[0];
+    
+    // タイトル適用
+    doc.setName(newTitle);
+
+    return CardService.newActionResponseBuilder()
+      .setNotification(CardService.newNotification().setText('タイトルを変更しました: ' + newTitle))
+      .build();
+
+  } catch (err) {
+    return CardService.newActionResponseBuilder()
+      .setNotification(CardService.newNotification().setText('エラー: ' + err.message))
+      .build();
+  }
 }
 
 /**
@@ -150,16 +199,16 @@ function applyAction(e) {
 }
 
 /**
- * Gemini API 呼び出し (ロジックは前回と同じ)
+ * Gemini API 呼び出し
  */
-function callGeminiApi(text) {
+function callGeminiApi(text, count = 5) {
   const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
   if (!apiKey) throw new Error("APIキーが設定されていません");
 
   const endpoint = `https://generativelanguage.googleapis.com/${API_VERSION}/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
 
   const prompt = `
-    以下のテキストの内容に基づき、適切で魅力的なドキュメントのタイトル案を5つ提案してください。
+    以下のテキストの内容に基づき、適切で魅力的なドキュメントのタイトル案を${count}つ提案してください。
     出力は純粋なJSON配列形式（["タイトル1", "タイトル2", ...]）のみとしてください。
     
     テキスト:
