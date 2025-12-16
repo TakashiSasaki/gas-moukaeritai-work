@@ -4,5 +4,16 @@
   "url": "https://script.google.com/d/1qBif_0AXBT0X8-joKtQlP1ZRlrpcGTOuqOSWLpONoHkl21FhDoICeSWM/edit?usp=drivesdk",
   "lastUpdated": "2025-12-16T02:18:16.020Z",
   "application.json": null,
-  "deployments.json": null
+  "deployments.json": [
+    {
+      "id": "AKfycbwg-3A5z_47_rCfWXUnwZuwrmoA6S9F3_gnpE5muNg5",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbxsQ8fkrup-1pCJ0-NR3PlpM289QdmkKh-ShAX09vtiAIbghKTm2RvQISywBhmQKIUQCg",
+      "target": "1",
+      "description": "リリース版"
+    }
+  ]
 }
