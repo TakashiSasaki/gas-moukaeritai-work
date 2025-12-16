@@ -15,7 +15,7 @@
   "addOns": {
     "common": {
       "name": "AI Title Generator",
-      "logoUrl": "https://www.gstatic.com/images/branding/product/1x/docs_2020q4_48dp.png",
+      "logoUrl": "https://gas.moukaeritai.work/1jdrz76e6DCQI4bmZAqlkRhM8uMjvycSr8MfNE1AFEpNk3IDjwyw4i0Rc/icon-192.png",
       "useLocaleFromApp": true,
       "homepageTrigger": {
         "runFunction": "onHomepage"
