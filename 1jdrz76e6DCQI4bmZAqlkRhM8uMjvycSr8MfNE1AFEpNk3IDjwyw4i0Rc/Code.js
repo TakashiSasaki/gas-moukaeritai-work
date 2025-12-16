@@ -32,10 +32,11 @@ function onHomepage(e) {
     }
 
     // Gemini API呼び出し (自動生成)
-    const result = callGeminiApi(text.substring(0, 30000), 5);
+    const temperature = 0.5;
+    const result = callGeminiApi(text.substring(0, 30000), 5, temperature);
     
     // 結果表示カードを返す
-    return buildResultCard(result.titles, result.prompt);
+    return buildResultCard(result.titles, result.prompt, temperature);
 
   } catch (err) {
     return buildErrorCard('エラーが発生しました: ' + err.message);
@@ -63,7 +64,8 @@ function quickApplyAction(e) {
     }
 
     // Gemini API呼び出し (1つだけ生成)
-    const result = callGeminiApi(text.substring(0, 30000), 1);
+    const temperature = parseFloat(e.formInput.temperature_setting || "0.5");
+    const result = callGeminiApi(text.substring(0, 30000), 1, temperature);
     const newTitle = result.titles[0];
     
     // タイトル適用
@@ -101,10 +103,11 @@ function generateAction(e) {
     }
 
     // Gemini API呼び出し
-    const result = callGeminiApi(text.substring(0, 30000));
+    const temperature = parseFloat(e.formInput.temperature_setting || "0.5");
+    const result = callGeminiApi(text.substring(0, 30000), 5, temperature);
     
     // 結果表示カードの作成と更新
-    const card = buildResultCard(result.titles, result.prompt);
+    const card = buildResultCard(result.titles, result.prompt, temperature);
     return CardService.newActionResponseBuilder()
       .setNavigation(CardService.newNavigation().updateCard(card))
       .build();
@@ -138,7 +141,7 @@ function showPromptAction(e) {
 /**
  * 結果選択用のカードを作成する (CardBuilderを返す)
  */
-function buildResultCard(titles, prompt) {
+function buildResultCard(titles, prompt, currentTemperature = 0.5) {
   const card = CardService.newCardBuilder();
   card.setHeader(CardService.newCardHeader().setTitle('提案されたタイトル'));
 
@@ -175,6 +178,20 @@ function buildResultCard(titles, prompt) {
   // 再生成・お任せボタンのセクション
   const footerSection = CardService.newCardSection();
   
+  // Temperature設定 (0.1 - 1.0)
+  const tempDropdown = CardService.newSelectionInput()
+    .setType(CardService.SelectionInputType.DROPDOWN)
+    .setTitle('創造性 (Temperature)')
+    .setFieldName('temperature_setting');
+  
+  for (let i = 1; i <= 10; i++) {
+    const val = (i / 10).toFixed(1); // "0.1", "0.2"...
+    // currentTemperatureと比較して選択状態にする
+    const isSelected = Math.abs(parseFloat(val) - parseFloat(currentTemperature)) < 0.001;
+    tempDropdown.addItem(val, val, isSelected);
+  }
+  footerSection.addWidget(tempDropdown);
+
   // 「再生成」ボタン (旧: 生成ボタン)
   const regenAction = CardService.newAction().setFunctionName('generateAction');
   footerSection.addWidget(
@@ -266,7 +283,7 @@ function applyAction(e) {
 /**
  * Gemini API 呼び出し
  */
-function callGeminiApi(text, count = 5) {
+function callGeminiApi(text, count = 5, temperature = 0.5) {
   const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
   if (!apiKey) throw new Error("APIキーが設定されていません");
 
@@ -284,7 +301,7 @@ function callGeminiApi(text, count = 5) {
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
     generationConfig: {
-      temperature: 0.7,
+      temperature: temperature,
       responseMimeType: "application/json"
     }
   };
