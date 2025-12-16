@@ -49,6 +49,7 @@
         <div class="row">
             <div class="col-md-4">
                 <h2>プロジェクト一覧</h2>
+                <input type="text" id="project-search" class="form-control mb-3" placeholder="検索...">
                 <div id="project-list" class="list-group position-sticky" style="top: 20px;">
                     <!-- JSでリストが挿入される -->
                 </div>
@@ -75,6 +76,7 @@
             const projectListEl = document.getElementById('project-list');
             const markdownContentEl = document.getElementById('markdown-content');
             const readmeTitleEl = document.getElementById('readme-title');
+            const projectSearchEl = document.getElementById('project-search');
 
             // 1. clasp-list.jsonを読み込む
             fetch('clasp-list.json')
@@ -96,6 +98,21 @@
                     console.error('Error fetching project list:', error);
                     projectListEl.innerHTML = '<p class="text-danger">プロジェクトリストを読み込めませんでした。</p>';
                 });
+
+            // 検索機能のインクリメンタルサーチ
+            projectSearchEl.addEventListener('input', function(e) {
+                const searchText = e.target.value.toLowerCase();
+                const items = projectListEl.querySelectorAll('.list-group-item');
+
+                items.forEach(item => {
+                    const text = item.textContent.toLowerCase();
+                    if (text.includes(searchText)) {
+                        item.classList.remove('d-none');
+                    } else {
+                        item.classList.add('d-none');
+                    }
+                });
+            });
 
             // 3. リストクリック時のイベントハンドラ
             projectListEl.addEventListener('click', function(e) {
