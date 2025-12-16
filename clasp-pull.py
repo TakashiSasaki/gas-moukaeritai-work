@@ -63,15 +63,43 @@ def refresh_clasp_token():
 def get_access_token():
     """Read access token from ~/.clasprc.json"""
     rc_path = os.path.expanduser('~/.clasprc.json')
+    print(f"Debug: Checking for credentials at {rc_path}")
+
     if not os.path.exists(rc_path):
+        print(f"Debug: File {rc_path} does not exist.")
         return None
+
     try:
         with open(rc_path, 'r') as f:
-            data = json.load(f)
-        if 'token' in data and 'access_token' in data['token']:
-            return data['token']['access_token']
+            content = f.read()
+            if not content.strip():
+                print("Debug: .clasprc.json is empty.")
+                return None
+            data = json.loads(content)
+        
+        # Log top-level keys safely
+        print(f"Debug: .clasprc.json top-level keys: {list(data.keys())}")
+
+        if 'token' in data:
+            token_data = data['token']
+            if isinstance(token_data, dict):
+                print(f"Debug: 'token' object keys: {list(token_data.keys())}")
+                if 'access_token' in token_data:
+                    return token_data['access_token']
+                else:
+                    print("Debug: 'access_token' not found inside 'token' object.")
+            else:
+                print(f"Debug: 'token' value is not a dict, but {type(token_data)}.")
+
         elif 'access_token' in data:
+            print("Debug: 'access_token' found at root level.")
             return data['access_token']
+        
+        else:
+            print("Debug: Could not find 'access_token' at root or inside 'token'.")
+
+    except json.JSONDecodeError as e:
+        print(f"Error parsing .clasprc.json: {e}", file=sys.stderr)
     except Exception as e:
         print(f"Error reading .clasprc.json: {e}", file=sys.stderr)
     return None
