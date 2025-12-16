@@ -32,10 +32,11 @@ function onHomepage(e) {
     }
 
     // Gemini API呼び出し (自動生成)
-    const titles = callGeminiApi(text.substring(0, 30000), 5);
+    const temperature = 0.5;
+    const result = callGeminiApi(text.substring(0, 30000), 5, temperature);
     
     // 結果表示カードを返す
-    return buildResultCard(titles);
+    return buildResultCard(result.titles, result.prompt, temperature);
 
   } catch (err) {
     return buildErrorCard('エラーが発生しました: ' + err.message);
@@ -63,8 +64,9 @@ function quickApplyAction(e) {
     }
 
     // Gemini API呼び出し (1つだけ生成)
-    const titles = callGeminiApi(text.substring(0, 30000), 1);
-    const newTitle = titles[0];
+    const temperature = parseFloat(e.formInput.temperature_setting || "0.5");
+    const result = callGeminiApi(text.substring(0, 30000), 1, temperature);
+    const newTitle = result.titles[0];
     
     // タイトル適用
     doc.setName(newTitle);
@@ -101,10 +103,11 @@ function generateAction(e) {
     }
 
     // Gemini API呼び出し
-    const titles = callGeminiApi(text.substring(0, 30000));
+    const temperature = parseFloat(e.formInput.temperature_setting || "0.5");
+    const result = callGeminiApi(text.substring(0, 30000), 5, temperature);
     
     // 結果表示カードの作成と更新
-    const card = buildResultCard(titles);
+    const card = buildResultCard(result.titles, result.prompt, temperature);
     return CardService.newActionResponseBuilder()
       .setNavigation(CardService.newNavigation().updateCard(card))
       .build();
@@ -117,9 +120,28 @@ function generateAction(e) {
 }
 
 /**
+ * プロンプトを表示するカードをプッシュする
+ */
+function showPromptAction(e) {
+  const prompt = e.parameters.prompt;
+  const card = CardService.newCardBuilder();
+  card.setHeader(CardService.newCardHeader().setTitle('使用されたプロンプト'));
+  
+  const section = CardService.newCardSection();
+  // プロンプトが長い場合も考慮してそのまま表示
+  section.addWidget(CardService.newTextParagraph().setText(prompt));
+  
+  card.addSection(section);
+  
+  return CardService.newActionResponseBuilder()
+    .setNavigation(CardService.newNavigation().pushCard(card.build()))
+    .build();
+}
+
+/**
  * 結果選択用のカードを作成する (CardBuilderを返す)
  */
-function buildResultCard(titles) {
+function buildResultCard(titles, prompt, currentTemperature = 0.5) {
   const card = CardService.newCardBuilder();
   card.setHeader(CardService.newCardHeader().setTitle('提案されたタイトル'));
 
@@ -156,6 +178,20 @@ function buildResultCard(titles) {
   // 再生成・お任せボタンのセクション
   const footerSection = CardService.newCardSection();
   
+  // Temperature設定 (0.1 - 1.0)
+  const tempDropdown = CardService.newSelectionInput()
+    .setType(CardService.SelectionInputType.DROPDOWN)
+    .setTitle('創造性 (Temperature)')
+    .setFieldName('temperature_setting');
+  
+  for (let i = 1; i <= 10; i++) {
+    const val = (i / 10).toFixed(1); // "0.1", "0.2"...
+    // currentTemperatureと比較して選択状態にする
+    const isSelected = Math.abs(parseFloat(val) - parseFloat(currentTemperature)) < 0.001;
+    tempDropdown.addItem(val, val, isSelected);
+  }
+  footerSection.addWidget(tempDropdown);
+
   // 「再生成」ボタン (旧: 生成ボタン)
   const regenAction = CardService.newAction().setFunctionName('generateAction');
   footerSection.addWidget(
@@ -171,6 +207,19 @@ function buildResultCard(titles) {
       .setText('お任せで適用 (1つ生成して適用)')
       .setOnClickAction(quickAction)
   );
+
+  // プロンプト確認ボタン (もしpromptがあれば)
+  if (prompt) {
+    const promptAction = CardService.newAction()
+        .setFunctionName('showPromptAction')
+        .setParameters({ prompt: prompt });
+        
+    footerSection.addWidget(
+      CardService.newTextButton()
+        .setText('使用したプロンプトを確認')
+        .setOnClickAction(promptAction)
+    );
+  }
 
   card.addSection(section);
   card.addSection(footerSection);
@@ -234,7 +283,7 @@ function applyAction(e) {
 /**
  * Gemini API 呼び出し
  */
-function callGeminiApi(text, count = 5) {
+function callGeminiApi(text, count = 5, temperature = 0.5) {
   const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
   if (!apiKey) throw new Error("APIキーが設定されていません");
 
@@ -242,6 +291,7 @@ function callGeminiApi(text, count = 5) {
 
   const prompt = `
     以下のテキストの内容に基づき、適切で魅力的なドキュメントのタイトル案を${count}つ提案してください。
+    視認性を高めるため、その文書を特徴づける重要な単語がタイトルの前方に来るような案を優先してください。
     出力は純粋なJSON配列形式（["タイトル1", "タイトル2", ...]）のみとしてください。
     
     テキスト:
@@ -251,7 +301,7 @@ function callGeminiApi(text, count = 5) {
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
     generationConfig: {
-      temperature: 0.7,
+      temperature: temperature,
       responseMimeType: "application/json"
     }
   };
@@ -271,5 +321,8 @@ function callGeminiApi(text, count = 5) {
   }
 
   const contentText = json.candidates[0].content.parts[0].text;
-  return JSON.parse(contentText);
+  return {
+    titles: JSON.parse(contentText),
+    prompt: prompt
+  };
 }
