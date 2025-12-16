@@ -1,7 +1,30 @@
 {
   "timeZone": "Asia/Tokyo",
-  "dependencies": {
-  },
+  "dependencies": {},
   "exceptionLogging": "STACKDRIVER",
-  "runtimeVersion": "V8"
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/documents.currentonly",
+    "https://www.googleapis.com/auth/script.external_request",
+    "https://www.googleapis.com/auth/script.locale",
+    "https://www.googleapis.com/auth/drive.file"
+  ],
+  "urlFetchWhitelist": [
+    "https://generativelanguage.googleapis.com/"
+  ],
+  "runtimeVersion": "V8",
+  "addOns": {
+    "common": {
+      "name": "AI Title Generator",
+      "logoUrl": "https://www.gstatic.com/images/branding/product/1x/docs_2020q4_48dp.png",
+      "useLocaleFromApp": true,
+      "homepageTrigger": {
+        "runFunction": "onHomepage"
+      }
+    },
+    "docs": {
+      "onFileScopeGrantedTrigger": {
+        "runFunction": "onHomepage"
+      }
+    }
+  }
 }

@@ -1,1 +1,38 @@
-[]
+[
+  {
+    "version": 5,
+    "description": "削除"
+  },
+  {
+    "version": 6,
+    "description": "公開用"
+  },
+  {
+    "version": 7,
+    "description": "公開用２"
+  },
+  {
+    "version": 8,
+    "description": "公開用３"
+  },
+  {
+    "version": 9,
+    "description": "No description"
+  },
+  {
+    "version": 10,
+    "description": "公開用"
+  },
+  {
+    "version": 11,
+    "description": "とにかくこのデプロイメントのバージョンを更新し続ける"
+  },
+  {
+    "version": 12,
+    "description": "No description"
+  },
+  {
+    "version": 13,
+    "description": "更新更新更新"
+  }
+]

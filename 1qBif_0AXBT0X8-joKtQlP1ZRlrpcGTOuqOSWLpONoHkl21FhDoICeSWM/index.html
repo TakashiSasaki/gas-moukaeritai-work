@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <title>Web Clip Stash</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Vue.js 3 (CDN) -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- Icons -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <style>
+    body { background-color: #f3f4f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
+    .fade-enter-from, .fade-leave-to { opacity: 0; }
+    .loader {
+      border: 3px solid #f3f3f3; border-top: 3px solid #3498db;
+      border-radius: 50%; width: 16px; height: 16px;
+      animation: spin 1s linear infinite; display: inline-block;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    
+    .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+    @keyframes shake {
+      10%, 90% { transform: translate3d(-1px, 0, 0); }
+      20%, 80% { transform: translate3d(2px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+      40%, 60% { transform: translate3d(4px, 0, 0); }
+    }
+
+    .modal-enter-active, .modal-leave-active { transition: opacity 0.3s; }
+    .modal-enter-from, .modal-leave-to { opacity: 0; }
+  </style>
+</head>
+<body>
+  <!-- レスポンシブ対応: モバイルでは p-2, タブレット以上(sm)で p-6 -->
+  <div id="app" class="max-w-6xl mx-auto p-2 sm:p-6 relative">
+    
+    <!-- ヘッダー -->
+    <header class="flex flex-col sm:flex-row justify-between items-center mb-4 sm:mb-6 bg-white p-4 sm:p-6 rounded-lg shadow-sm">
+      <div class="mb-2 sm:mb-0 text-center sm:text-left">
+        <h1 class="text-xl sm:text-2xl font-bold text-gray-800"><i class="fas fa-layer-group text-blue-600 mr-2"></i>Web Clip Stash</h1>
+        <p class="text-gray-500 text-xs sm:text-sm mt-1">AI-powered Drive Organizer for Engineers</p>
+      </div>
+      <div class="text-right">
+        <span class="bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">Gemini 2.5 Flash Lite</span>
+      </div>
+    </header>
+
+    <!-- エラーメッセージ -->
+    <transition name="fade">
+      <div v-if="errorMessage" class="mb-4 sm:mb-6 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-sm flex items-start shake" role="alert">
+        <i class="fas fa-exclamation-triangle mt-1 mr-3"></i>
+        <div>
+          <p class="font-bold text-sm sm:text-base">エラーが発生しました</p>
+          <p class="text-xs sm:text-sm break-all">{{ errorMessage }}</p>
+        </div>
+        <button @click="errorMessage = ''" class="ml-auto text-red-700 hover:text-red-900">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+    </transition>
+
+    <!-- コントロールパネル -->
+    <div class="bg-white p-3 sm:p-4 rounded-lg shadow-sm mb-4 sm:mb-6 sticky top-1 sm:top-2 z-10 border border-gray-200">
+      <div class="flex flex-col md:flex-row justify-between items-center gap-3 md:gap-0">
+        
+        <!-- 左側：操作エリア -->
+        <div class="flex flex-wrap items-center justify-center md:justify-start gap-2 w-full md:w-auto">
+          
+          <div class="relative">
+            <select v-model.number="fetchLimit" :disabled="isProcessing"
+              class="appearance-none bg-gray-50 border border-gray-300 text-gray-700 py-2 pl-3 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-blue-500 disabled:opacity-50 text-sm">
+              <option value="1">1件</option>
+              <option value="5">5件</option>
+              <option value="10">10件</option>
+              <option value="50">50件</option>
+              <option value="100">100件</option>
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+              <i class="fas fa-chevron-down text-xs"></i>
+            </div>
+          </div>
+
+          <button @click="fetchFiles" :disabled="isProcessing" 
+            class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-3 sm:px-4 rounded transition flex items-center whitespace-nowrap disabled:opacity-50 text-sm">
+            <i class="fas fa-sync-alt mr-1 sm:mr-2" :class="{'fa-spin': isLoading}"></i> <span class="hidden sm:inline">最新候補を</span>取得
+          </button>
+          
+          <div class="hidden sm:block h-8 w-px bg-gray-300 mx-2"></div>
+
+          <button @click="showLogicDialog" :disabled="isProcessing"
+            class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-3 rounded transition flex items-center whitespace-nowrap disabled:opacity-50 text-sm"
+            title="判定ロジック設定">
+            <i class="fas fa-cogs mr-1 sm:mr-2"></i> <span class="hidden sm:inline">ロジック</span>設定
+          </button>
+
+          <button @click="startPrediction" :disabled="files.length === 0 || isPredicting || isMoving"
+            class="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium py-2 px-4 sm:px-6 rounded transition shadow-md flex items-center whitespace-nowrap disabled:opacity-50 text-sm">
+            <i class="fas fa-brain mr-1 sm:mr-2"></i> 推論開始
+          </button>
+        </div>
+
+        <!-- 右側：移動操作エリア -->
+        <div class="flex items-center space-x-3 w-full md:w-auto justify-center md:justify-end">
+          <div v-if="moveCandidatesCount > 0" class="text-sm font-bold text-red-600 whitespace-nowrap">
+            {{ moveCandidatesCount }} 件<span class="hidden sm:inline">を選択中</span>
+          </div>
+          <button @click="executeMove" :disabled="moveCandidatesCount === 0 || isMoving"
+            class="bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white font-medium py-2 px-4 sm:px-6 rounded transition shadow-md flex items-center whitespace-nowrap disabled:opacity-50 text-sm">
+            <i class="fas fa-folder-open mr-1 sm:mr-2"></i> 移動<span class="hidden sm:inline">を実行</span>
+          </button>
+        </div>
+      </div>
+      
+      <!-- プログレスバー -->
+      <div v-if="isPredicting" class="w-full bg-gray-200 rounded-full h-2.5 mt-3">
+        <div class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" :style="{ width: progress + '%' }"></div>
+      </div>
+      <div v-if="statusMessage" class="text-xs sm:text-sm text-gray-600 mt-2 text-right truncate">
+        {{ statusMessage }}
+      </div>
+    </div>
+
+    <!-- ファイルリスト -->
+    <div class="bg-white rounded-lg shadow overflow-hidden overflow-x-auto">
+      <div v-if="files.length === 0 && !isLoading && !errorMessage" class="p-6 sm:p-10 text-center text-gray-500">
+        <i class="fas fa-inbox text-3xl sm:text-4xl mb-3 block"></i>
+        <span class="text-sm">候補ファイルはありません。<br>「取得」ボタンを押してください。</span>
+      </div>
+
+      <table v-else class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10 sm:w-12">選択</th>
+            <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ファイル名</th>
+            <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24 sm:w-32">種類</th>
+            <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28 sm:w-40 hidden sm:table-cell">更新日</th>
+            <th class="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28 sm:w-40">AI判定</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <tr v-for="file in files" :key="file.id" 
+              :class="{'bg-red-50': file.status === 'MOVE' && file.checked, 'opacity-50': file.status === 'MOVED'}">
+            
+            <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-center">
+              <input type="checkbox" v-model="file.checked" :disabled="file.status !== 'MOVE' || file.status === 'MOVED'"
+                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded cursor-pointer disabled:opacity-30">
+            </td>
+            
+            <!-- ファイル名セル（サムネイル表示機能付き） -->
+            <td class="px-3 sm:px-6 py-3 sm:py-4 relative"
+                @mouseenter="hoverFileId = file.id"
+                @mouseleave="hoverFileId = null">
+              <div class="flex items-center">
+                <i :class="getFileIcon(file.mimeType)" class="mr-2 text-gray-500 text-base sm:text-lg"></i>
+                <a :href="file.url" target="_blank" class="text-xs sm:text-sm font-medium text-gray-900 hover:text-blue-600 truncate max-w-[150px] sm:max-w-md block" :title="file.name">
+                  {{ file.name }}
+                </a>
+              </div>
+              <div class="sm:hidden text-xs text-gray-400 mt-1 pl-6">
+                {{ formatDate(file.lastUpdated) }}
+              </div>
+
+              <!-- サムネイルポップアップ -->
+              <transition name="fade">
+                <div v-if="hoverFileId === file.id && file.thumbnailLink" 
+                     class="absolute z-50 left-10 bottom-full mb-2 p-1 bg-white border border-gray-300 rounded shadow-lg">
+                  <img :src="file.thumbnailLink" class="max-w-[200px] max-h-[200px] object-contain rounded" alt="Thumbnail">
+                </div>
+              </transition>
+            </td>
+            
+            <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-xs sm:text-sm text-gray-500">
+              {{ formatMimeType(file.mimeType) }}
+            </td>
+            
+            <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
+              {{ formatDate(file.lastUpdated) }}
+            </td>
+            
+            <td class="px-3 sm:px-6 py-3 sm:py-4 whitespace-nowrap">
+              <div v-if="file.loading" class="flex items-center text-gray-500">
+                <span class="loader mr-2"></span> <span class="text-xs">解析中...</span>
+              </div>
+              
+              <span v-else-if="file.status === 'MOVE'" class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                MOVE
+              </span>
+              
+              <span v-else-if="file.status === 'KEEP' && file.reason === 'Keyword Match'" class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800" title="キーワード設定による除外">
+                <i class="fas fa-filter mr-1"></i> KEEP
+              </span>
+
+              <span v-else-if="file.status === 'KEEP'" class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800" title="AIによる判定">
+                <i class="fas fa-robot mr-1"></i> KEEP
+              </span>
+              
+              <span v-else-if="file.status === 'MOVED'" class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                完了
+              </span>
+
+              <span v-else-if="file.status === 'ERROR'" class="group relative px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 cursor-help">
+                ERROR <i class="fas fa-info-circle ml-1"></i>
+                <span class="absolute bottom-full right-0 mb-2 w-48 bg-gray-800 text-white text-xs rounded p-2 opacity-0 group-hover:opacity-100 transition-opacity z-50 pointer-events-none whitespace-normal">
+                  {{ file.errorReason || '不明なエラー' }}
+                </span>
+              </span>
+              <span v-else class="text-xs text-gray-400">-</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 判定ロジック確認・編集モーダル (幅調整) -->
+    <transition name="modal">
+      <div v-if="showModal" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+          <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" @click="closeModal"></div>
+          <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+          <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full my-8 w-full max-w-[95%]">
+            
+            <div class="bg-white px-3 pt-4 pb-4 sm:p-6 sm:pb-4">
+              <div class="sm:flex sm:items-start">
+                <div class="mt-2 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                  <h3 class="text-lg sm:text-xl leading-6 font-bold text-gray-900 mb-4" id="modal-title">
+                    <i class="fas fa-cogs text-gray-500 mr-2"></i>判定ロジック設定
+                  </h3>
+                  
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                    <!-- 左カラム: ルールベース判定 (編集可能) -->
+                    <div class="flex flex-col h-full">
+                      <div class="flex justify-between items-center border-b pb-1 mb-2">
+                        <h4 class="text-xs sm:text-sm font-bold text-gray-700 uppercase">
+                          <i class="fas fa-filter text-blue-500 mr-1"></i> 1. Keep List (Editable)
+                        </h4>
+                        <div v-if="isEditingKeywords">
+                          <button @click="cancelKeywordEdit" class="text-xs text-gray-500 hover:text-gray-700 mr-2">Cancel</button>
+                          <button @click="saveKeywords" class="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded">Save</button>
+                        </div>
+                        <button v-else @click="startKeywordEdit" class="text-xs text-blue-600 hover:text-blue-800">
+                          <i class="fas fa-edit"></i> Edit
+                        </button>
+                      </div>
+                      
+                      <p class="text-xs text-gray-500 mb-2">ファイル名に以下のキーワードが含まれる場合、強制的に <strong>KEEP</strong> されます。</p>
+                      
+                      <!-- 閲覧モード -->
+                      <div v-if="!isEditingKeywords" class="bg-gray-50 p-2 sm:p-3 rounded border border-gray-200 h-64 sm:h-96 overflow-y-auto">
+                        <div v-if="keepKeywords.length > 0" class="flex flex-wrap gap-2">
+                          <span v-for="kw in keepKeywords" :key="kw" class="px-2 py-1 bg-white border border-gray-300 rounded text-xs sm:text-sm text-gray-700 font-mono shadow-sm">
+                            {{ kw }}
+                          </span>
+                        </div>
+                        <div v-else class="text-gray-400 text-xs sm:text-sm italic p-2">
+                          キーワードは設定されていません。
+                        </div>
+                      </div>
+
+                      <!-- 編集モード -->
+                      <div v-else class="h-64 sm:h-96">
+                        <textarea v-model="keywordsEditText" 
+                          class="w-full h-full p-2 sm:p-3 border border-blue-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-200 font-mono text-xs sm:text-sm bg-blue-50"
+                          placeholder="キーワードを1行に1つ入力してください"></textarea>
+                      </div>
+                    </div>
+
+                    <!-- 右カラム: AI判定 (閲覧のみ) -->
+                    <div>
+                      <h4 class="text-xs sm:text-sm font-bold text-gray-700 mb-2 uppercase border-b pb-1">
+                        <i class="fas fa-robot text-purple-500 mr-1"></i> 2. AI Prediction
+                      </h4>
+                      <p class="text-xs text-gray-500 mb-2">静的フィルタを通過したファイルは、以下のプロンプトに基づいて判定されます。</p>
+                      
+                      <div class="bg-gray-800 text-green-400 p-2 sm:p-3 rounded text-xs font-mono whitespace-pre-wrap overflow-y-auto h-64 sm:h-96 border border-gray-600 shadow-inner leading-relaxed">
+                        {{ promptPreviewText || 'ロード中...' }}
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-gray-100 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+              <button type="button" @click="closeModal" class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+  </div>
+
+  <script>
+    const { createApp, ref, computed } = Vue;
+
+    createApp({
+      setup() {
+        const files = ref([]);
+        const isLoading = ref(false);
+        const isPredicting = ref(false);
+        const isMoving = ref(false);
+        const progress = ref(0);
+        const statusMessage = ref("");
+        const errorMessage = ref("");
+        const fetchLimit = ref(10);
+        
+        // モーダル・ロジック編集関連
+        const showModal = ref(false);
+        const promptPreviewText = ref("");
+        const keepKeywords = ref([]);
+        const isEditingKeywords = ref(false);
+        const keywordsEditText = ref("");
+        
+        // ホバー中のファイルID
+        const hoverFileId = ref(null);
+
+        const isProcessing = computed(() => isLoading.value || isPredicting.value || isMoving.value);
+        
+        const moveCandidatesCount = computed(() => {
+          return files.value.filter(f => f.checked && f.status === 'MOVE').length;
+        });
+
+        const resetError = () => { errorMessage.value = ""; };
+
+        const showLogicDialog = () => {
+          showModal.value = true;
+          isEditingKeywords.value = false;
+          
+          if (!promptPreviewText.value) {
+            google.script.run
+              .withSuccessHandler((text) => { promptPreviewText.value = text; })
+              .withFailureHandler((err) => { promptPreviewText.value = "Error: " + err.message; })
+              .getPromptPreview();
+          }
+          
+          google.script.run
+            .withSuccessHandler((list) => { keepKeywords.value = list; })
+            .withFailureHandler((err) => { console.error(err); })
+            .getKeepKeywords();
+        };
+
+        const closeModal = () => {
+          showModal.value = false;
+          isEditingKeywords.value = false;
+        };
+
+        const startKeywordEdit = () => {
+          keywordsEditText.value = keepKeywords.value.join('\n');
+          isEditingKeywords.value = true;
+        };
+
+        const cancelKeywordEdit = () => {
+          isEditingKeywords.value = false;
+        };
+
+        const saveKeywords = () => {
+          const lines = keywordsEditText.value.split('\n');
+          google.script.run
+            .withSuccessHandler((newList) => {
+              keepKeywords.value = newList;
+              isEditingKeywords.value = false;
+            })
+            .withFailureHandler((err) => {
+              alert("保存に失敗しました: " + err.message);
+            })
+            .saveKeepKeywords(lines);
+        };
+
+        const fetchFiles = () => {
+          resetError();
+          isLoading.value = true;
+          statusMessage.value = `ファイルリストを取得中（最大 ${fetchLimit.value} 件）...`;
+          files.value = [];
+          
+          google.script.run
+            .withSuccessHandler((result) => {
+              files.value = result.map(f => ({
+                ...f,
+                status: 'PENDING',
+                checked: false,
+                loading: false,
+                errorReason: '',
+                reason: ''
+              }));
+              isLoading.value = false;
+              statusMessage.value = `${result.length} 件取得しました`;
+            })
+            .withFailureHandler((error) => {
+              errorMessage.value = "ファイル取得エラー: " + error.message;
+              isLoading.value = false;
+              statusMessage.value = "";
+            })
+            .getRecentCandidates(fetchLimit.value);
+        };
+
+        const startPrediction = async () => {
+          resetError();
+          isPredicting.value = true;
+          const BATCH_SIZE = 5; 
+          const targetFiles = files.value.filter(f => f.status === 'PENDING');
+          const total = targetFiles.length;
+          let processed = 0;
+
+          if (total === 0) {
+            errorMessage.value = "判定待ちのファイルがありません。「最新候補を取得」してください。";
+            isPredicting.value = false;
+            return;
+          }
+
+          let abortProcessing = false;
+
+          for (let i = 0; i < total; i += BATCH_SIZE) {
+            if (abortProcessing) break;
+            const chunk = targetFiles.slice(i, i + BATCH_SIZE);
+            const chunkIds = chunk.map(f => f.id);
+            chunk.forEach(f => f.loading = true);
+
+            await new Promise(resolve => {
+              google.script.run
+                .withSuccessHandler((results) => {
+                  results.forEach(res => {
+                    const file = files.value.find(f => f.id === res.id);
+                    if (file) {
+                      file.status = res.decision; 
+                      file.reason = res.reason;
+                      file.loading = false;
+                      if (res.decision === 'MOVE') {
+                        file.checked = true;
+                      } else if (res.decision === 'ERROR') {
+                        file.errorReason = res.reason;
+                      }
+                    }
+                  });
+                  processed += chunk.length;
+                  progress.value = (processed / total) * 100;
+                  statusMessage.value = `AI判定中... ${processed} / ${total}`;
+                  resolve();
+                })
+                .withFailureHandler((err) => {
+                  errorMessage.value = "判定プロセスエラー: " + err.message;
+                  chunk.forEach(f => { f.loading = false; f.status = 'ERROR'; f.errorReason = err.message; });
+                  abortProcessing = true;
+                  resolve(); 
+                })
+                .predictFilesBatch(chunkIds);
+            });
+          }
+
+          isPredicting.value = false;
+          if (!errorMessage.value) {
+            statusMessage.value = "AI判定完了。移動対象を確認して「移動を実行」を押してください。";
+          } else {
+            statusMessage.value = "エラーにより処理を中断しました。";
+          }
+        };
+
+        const executeMove = () => {
+          resetError();
+          const moveTargets = files.value.filter(f => f.checked && f.status === 'MOVE');
+          if (moveTargets.length === 0) return;
+          if (!confirm(`${moveTargets.length} 件のファイルを移動しますか？`)) return;
+
+          isMoving.value = true;
+          statusMessage.value = "ファイルを移動中...";
+          const targetIds = moveTargets.map(f => f.id);
+
+          google.script.run
+            .withSuccessHandler((results) => {
+              let successCount = 0;
+              let failCount = 0;
+              results.forEach(res => {
+                const file = files.value.find(f => f.id === res.id);
+                if (file) {
+                  if (res.success) {
+                    file.status = 'MOVED';
+                    file.checked = false;
+                    successCount++;
+                  } else {
+                    file.status = 'ERROR';
+                    file.errorReason = res.error;
+                    failCount++;
+                  }
+                }
+              });
+              
+              isMoving.value = false;
+              if (failCount > 0) {
+                errorMessage.value = `${failCount} 件の移動に失敗しました。`;
+                statusMessage.value = `完了: ${successCount} 件移動済み。`;
+              } else {
+                statusMessage.value = `完了: ${successCount} 件すべて移動しました。次の候補を取得します...`;
+                setTimeout(() => { fetchFiles(); }, 2000);
+              }
+            })
+            .withFailureHandler((err) => {
+              errorMessage.value = "移動処理エラー: " + err.message;
+              isMoving.value = false;
+            })
+            .moveFilesBatch(targetIds);
+        };
+
+        const formatDate = (ts) => new Date(ts).toLocaleDateString('ja-JP');
+        const getFileIcon = (mime) => {
+          if (mime.includes('pdf')) return 'fa-file-pdf text-red-500';
+          if (mime.includes('document')) return 'fa-file-word text-blue-500';
+          return 'fa-file-alt text-gray-500';
+        };
+        const formatMimeType = (mime) => {
+          if (mime.includes('pdf')) return 'PDF';
+          if (mime.includes('document')) return 'Google Doc';
+          return 'Text/MD';
+        };
+
+        return {
+          files, isLoading, isPredicting, isMoving, progress, statusMessage, errorMessage, 
+          isProcessing, moveCandidatesCount, fetchLimit, showModal, promptPreviewText, 
+          keepKeywords, isEditingKeywords, keywordsEditText,
+          fetchFiles, startPrediction, executeMove, showLogicDialog, closeModal,
+          startKeywordEdit, cancelKeywordEdit, saveKeywords,
+          formatDate, getFileIcon, formatMimeType, hoverFileId
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
