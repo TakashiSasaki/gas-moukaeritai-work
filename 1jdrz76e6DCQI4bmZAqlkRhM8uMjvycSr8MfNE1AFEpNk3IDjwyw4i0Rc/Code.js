@@ -8,45 +8,84 @@ const API_VERSION = 'v1beta';
 
 /**
  * アドオン起動時（ホームページ）のUIを作成
+ * 自動的にタイトル案を生成して表示する
  */
 function onHomepage(e) {
-  const card = CardService.newCardBuilder();
-  
-  // ヘッダー
-  card.setHeader(CardService.newCardHeader().setTitle('AI Title Generator'));
+  try {
+    // ドキュメント取得を試みる (onHomepageではnullの場合があるためtry-catchやnullチェック推奨)
+    // 実際には DocumentApp.getActiveDocument() はonHomepageトリガーでも動作することが多いが、
+    // コンテキストによっては取れない場合もある。
+    let doc = null;
+    try {
+        doc = DocumentApp.getActiveDocument();
+    } catch (ex) {
+        // 無視
+    }
 
-  // セクション1: 説明とボタン
-  const section = CardService.newCardSection();
-  
-  section.addWidget(
-    CardService.newTextParagraph()
-      .setText('現在のドキュメント内容を分析し、最適なタイトル案を提案します。')
-  );
+    if (!doc) {
+      return buildErrorCard('ドキュメントが開かれていないか、アクセスできません。');
+    }
 
-  // 「生成」ボタン
-  // ボタンを押すと generateAction 関数を実行する
-  const action = CardService.newAction().setFunctionName('generateAction');
-  
-  section.addWidget(
-    CardService.newTextButton()
-      .setText('タイトル案を生成')
-      .setTextButtonStyle(CardService.TextButtonStyle.FILLED)
-      .setOnClickAction(action)
-  );
+    const text = doc.getBody().getText();
+    if (!text || text.trim().length === 0) {
+      return buildErrorCard('ドキュメントが空です。文字を入力してから実行してください。');
+    }
 
-  card.addSection(section);
-  return card.build();
+    // Gemini API呼び出し (自動生成)
+    const titles = callGeminiApi(text.substring(0, 30000), 5);
+    
+    // 結果表示カードを返す
+    return buildResultCard(titles);
+
+  } catch (err) {
+    return buildErrorCard('エラーが発生しました: ' + err.message);
+  }
 }
 
 /**
- * 「生成」ボタンが押されたときのアクション
- * Gemini APIを呼び出し、結果を選択画面として表示する
+ * 「お任せ」ボタンが押されたときのアクション
+ * Gemini APIを呼び出し、生成されたタイトルを即座に適用する
+ */
+function quickApplyAction(e) {
+  try {
+    const doc = DocumentApp.getActiveDocument();
+    if (!doc) {
+      return CardService.newActionResponseBuilder()
+        .setNotification(CardService.newNotification().setText('ドキュメントが開かれていません'))
+        .build();
+    }
+    
+    const text = doc.getBody().getText();
+    if (!text || text.trim().length === 0) {
+      return CardService.newActionResponseBuilder()
+        .setNotification(CardService.newNotification().setText('ドキュメントが空です'))
+        .build();
+    }
+
+    // Gemini API呼び出し (1つだけ生成)
+    const titles = callGeminiApi(text.substring(0, 30000), 1);
+    const newTitle = titles[0];
+    
+    // タイトル適用
+    doc.setName(newTitle);
+
+    return CardService.newActionResponseBuilder()
+      .setNotification(CardService.newNotification().setText('タイトルを変更しました: ' + newTitle))
+      .build();
+
+  } catch (err) {
+    return CardService.newActionResponseBuilder()
+      .setNotification(CardService.newNotification().setText('エラー: ' + err.message))
+      .build();
+  }
+}
+
+/**
+ * 「生成」ボタン（または再生成）が押されたときのアクション
+ * Gemini APIを呼び出し、結果カードを更新する
  */
 function generateAction(e) {
   try {
-    // ドキュメント本文を取得
-    // ※CardServiceでは getActiveDocument() がnullになることがあるため、eから取得する場合もあるが、
-    // currentonlyスコープでは通常通り取得可能
     const doc = DocumentApp.getActiveDocument();
     if (!doc) {
       return CardService.newActionResponseBuilder()
@@ -64,8 +103,11 @@ function generateAction(e) {
     // Gemini API呼び出し
     const titles = callGeminiApi(text.substring(0, 30000));
     
-    // 結果表示カードの作成
-    return createResultCard(titles);
+    // 結果表示カードの作成と更新
+    const card = buildResultCard(titles);
+    return CardService.newActionResponseBuilder()
+      .setNavigation(CardService.newNavigation().updateCard(card))
+      .build();
 
   } catch (err) {
     return CardService.newActionResponseBuilder()
@@ -75,9 +117,9 @@ function generateAction(e) {
 }
 
 /**
- * 結果選択用のカードを作成してナビゲーションにプッシュする
+ * 結果選択用のカードを作成する (CardBuilderを返す)
  */
-function createResultCard(titles) {
+function buildResultCard(titles) {
   const card = CardService.newCardBuilder();
   card.setHeader(CardService.newCardHeader().setTitle('提案されたタイトル'));
 
@@ -111,12 +153,52 @@ function createResultCard(titles) {
     );
   }
 
-  card.addSection(section);
+  // 再生成・お任せボタンのセクション
+  const footerSection = CardService.newCardSection();
   
-  // ナビゲーションを更新（新しいカードを重ねて表示）
-  return CardService.newActionResponseBuilder()
-    .setNavigation(CardService.newNavigation().pushCard(card.build()))
-    .build();
+  // 「再生成」ボタン (旧: 生成ボタン)
+  const regenAction = CardService.newAction().setFunctionName('generateAction');
+  footerSection.addWidget(
+    CardService.newTextButton()
+      .setText('タイトル案を再生成')
+      .setOnClickAction(regenAction)
+  );
+
+  // 「お任せ」ボタン (便利なため残す)
+  const quickAction = CardService.newAction().setFunctionName('quickApplyAction');
+  footerSection.addWidget(
+    CardService.newTextButton()
+      .setText('お任せで適用 (1つ生成して適用)')
+      .setOnClickAction(quickAction)
+  );
+
+  card.addSection(section);
+  card.addSection(footerSection);
+  
+  return card.build();
+}
+
+/**
+ * エラー時や初期状態用のカードを作成
+ */
+function buildErrorCard(message) {
+  const card = CardService.newCardBuilder();
+  card.setHeader(CardService.newCardHeader().setTitle('AI Title Generator'));
+  
+  const section = CardService.newCardSection();
+  section.addWidget(CardService.newTextParagraph().setText(message));
+  
+  // 「生成」ボタン (リトライ用)
+  const action = CardService.newAction().setFunctionName('generateAction');
+  section.addWidget(
+    CardService.newTextButton()
+      .setText('タイトル案を生成')
+      .setTextButtonStyle(CardService.TextButtonStyle.FILLED)
+      .setOnClickAction(action)
+  );
+  
+  card.addSection(section);
+  return card.build();
 }
 
 /**
@@ -150,16 +232,16 @@ function applyAction(e) {
 }
 
 /**
- * Gemini API 呼び出し (ロジックは前回と同じ)
+ * Gemini API 呼び出し
  */
-function callGeminiApi(text) {
+function callGeminiApi(text, count = 5) {
   const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
   if (!apiKey) throw new Error("APIキーが設定されていません");
 
   const endpoint = `https://generativelanguage.googleapis.com/${API_VERSION}/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
 
   const prompt = `
-    以下のテキストの内容に基づき、適切で魅力的なドキュメントのタイトル案を5つ提案してください。
+    以下のテキストの内容に基づき、適切で魅力的なドキュメントのタイトル案を${count}つ提案してください。
     出力は純粋なJSON配列形式（["タイトル1", "タイトル2", ...]）のみとしてください。
     
     テキスト:
