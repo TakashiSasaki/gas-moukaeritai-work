@@ -2,6 +2,9 @@
 
 This repository is used to download all projects from Google Apps Script and manage them using Git.
 
+このリポジトリは複数のGoogle Apps Scriptプロジェクトを集めてコードを一元管理するためのものです。サブディレクトリごとに異なるGASプロジェクトが含まれています。
+サブディレクトリ名はある程度Google Apps Scriptプロジェクトのプロジェクト名を反映していますが英数字と記号に限定したディレクトリ名とするためにこのリポジトリの中で付けなおしています。
+
 ## Purpose
 
 The primary purpose of this repository is to provide a centralized location for:
