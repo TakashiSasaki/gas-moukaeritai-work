@@ -143,10 +143,56 @@ def update_local_metadata(project_dir, update_time):
     with open(meta_path, 'w') as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
+def run_clasp_with_retry(cmd, cwd=None, capture_output=False, retries=3):
+    """
+    Run a clasp command with retries.
+    If it fails, try to refresh token via `clasp list` and retry.
+    """
+    attempt = 0
+    while attempt < retries:
+        attempt += 1
+        print(f"  Running: {cmd} (Attempt {attempt}/{retries})")
+        
+        try:
+            result = subprocess.run(
+                cmd,
+                shell=True,
+                cwd=cwd,
+                check=True,
+                stdout=subprocess.PIPE if capture_output else None,
+                stderr=subprocess.PIPE if capture_output else None,
+                encoding='utf-8',
+                errors='replace'
+            )
+            return result
+        except subprocess.CalledProcessError as e:
+            print(f"    Command failed with exit code {e.returncode}.", file=sys.stderr)
+            if capture_output:
+                print(f"    Stdout: {e.stdout}", file=sys.stderr)
+                print(f"    Stderr: {e.stderr}", file=sys.stderr)
+            
+            # If it's an auth error, try to refresh
+            # We suspect "Request is missing required authentication credential" or similar
+            if attempt < retries:
+                print("    Attempting to refresh token via `clasp list`...", file=sys.stderr)
+                try:
+                    subprocess.run('clasp list', shell=True, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                except:
+                    pass
+                time.sleep(2)  # Wait a bit
+            else:
+                raise e
+
 def main():
     base_dir = os.getcwd()
     entries = os.listdir(base_dir)
     
+    # Check clasp version
+    try:
+        subprocess.run('clasp -v', shell=True, check=True)
+    except:
+        print("Warning: could not check clasp version.")
+
     # Refresh token once at the start
     refresh_clasp_token()
     access_token = get_access_token()
@@ -190,57 +236,48 @@ def main():
 
             if should_pull:
                 try:
-                    os.chdir(project_dir)
-
                     # 1) Pull latest files via shell
                     print("  Running `clasp pull` via shell...")
-                    subprocess.run('clasp pull', shell=True, check=True)
+                    run_clasp_with_retry('clasp pull', cwd=project_dir)
 
                     # 2) Fetch deployments via shell
                     print("  Fetching deployments via shell...")
-                    proc_dep = subprocess.run(
+                    proc_dep = run_clasp_with_retry(
                         'clasp deployments',
-                        shell=True,
-                        check=True,
-                        stdout=subprocess.PIPE,
-                        encoding='utf-8',
-                        errors='replace'
+                        cwd=project_dir,
+                        capture_output=True
                     )
                     raw_dep = proc_dep.stdout
-                    with open('deployments.txt', 'w', encoding='utf-8') as f:
+                    with open(os.path.join(project_dir, 'deployments.txt'), 'w', encoding='utf-8') as f:
                         f.write(raw_dep)
                     deps = parse_deployments(raw_dep)
-                    with open('deployments.json', 'w', encoding='utf-8') as f:
+                    with open(os.path.join(project_dir, 'deployments.json'), 'w', encoding='utf-8') as f:
                         json.dump(deps, f, ensure_ascii=False, indent=2)
 
                     # 3) Fetch versions via shell
                     print("  Fetching versions via shell...")
-                    proc_ver = subprocess.run(
+                    proc_ver = run_clasp_with_retry(
                         'clasp versions',
-                        shell=True,
-                        check=True,
-                        stdout=subprocess.PIPE,
-                        encoding='utf-8',
-                        errors='replace'
+                        cwd=project_dir,
+                        capture_output=True
                     )
                     raw_ver = proc_ver.stdout
-                    with open('versions.txt', 'w', encoding='utf-8') as f:
+                    with open(os.path.join(project_dir, 'versions.txt'), 'w', encoding='utf-8') as f:
                         f.write(raw_ver)
                     vers = parse_versions(raw_ver)
-                    with open('versions.json', 'w', encoding='utf-8') as f:
+                    with open(os.path.join(project_dir, 'versions.json'), 'w', encoding='utf-8') as f:
                         json.dump(vers, f, ensure_ascii=False, indent=2)
                     
                     # Update metadata if we have the time
                     if remote_update_time:
-                        # Writing from inside project_dir
-                        update_local_metadata('.', remote_update_time)
+                        update_local_metadata(project_dir, remote_update_time)
 
                     print(f"  Completed project '{entry}'.")
 
                 except subprocess.CalledProcessError as e:
                     print(f"Error: command failed in {entry}: {e}", file=sys.stderr)
                 finally:
-                    os.chdir(base_dir)
+                    pass  # We used cwd argument, so we don't need to chdir back
 
     print("All projects processed.")
 
