@@ -46,7 +46,33 @@ During the renaming process, it was identified that some images (despite having 
 *   **Result:** The total number of unique image files was reduced from 32 to 28.
 *   **Tools:** Python with the `hashlib` library.
 
+## 6. Step 5: Simplification and Standardization
+
+To further simplify the filenames for easier usage and reading while maintaining color estimation and uniqueness:
+*   **Action:** Filenames were simplified by removing redundant dimensions and shortening color names.
+*   **Strategy:**
+    *   **Remove Dimensions:** `512x512` was removed as all images share this size.
+    *   **Simplify Colors:** Common prefixes (dark, light, medium, pale, dim) were stripped from CSS color names (e.g., `darkolivegreen` -> `olive`).
+    *   **Renumber:** Files were sorted by simplified color name and re-indexed sequentially.
+*   **Result:** Files adopted the format `[SimplifiedMain]_[SimplifiedAccent]_[Index].png`.
+
+## 7. Step 6: Semantic Disambiguation (Removing Numbers)
+
+The goal was to remove the arbitrary index numbers and rely solely on color information for uniqueness.
+*   **Action:** Colliding filenames (e.g., `gold_03` and `gold_04`) were analyzed to find a distinctive third color or feature.
+*   **Strategy:**
+    *   Images with unique `[Main]_[Accent]` pairs simply had the number removed.
+    *   Images with colliding names were assigned a new suffix based on their distinctive third color or specific shade (e.g., `_green`, `_purple`, `_teal`).
+*   **Result:** All filenames are now unique and purely semantic.
+
 ## Summary of Final Naming Convention:
 
-`[width]x[height]-[DOMINANT_CSS_COLOR_NAME]-[ACCENT_CSS_COLOR_NAME]-[index].png`
-*(Exception: For 'bisque' and 'peachpuff', ACCENT_CSS_COLOR_NAME is omitted).*
+`[SimplifiedMain]_[SimplifiedAccent](_[Distinguisher]).png`
+
+*   **SimplifiedMain/Accent:** Shortened CSS color names (e.g., `olive`, `slate`, `gold`).
+*   **Distinguisher:** (Optional) A third color name added only when necessary to distinguish between images that share the same main and accent colors.
+*   **Examples:**
+    *   `gold.png`
+    *   `gold_green.png`
+    *   `gray_linen.png`
+    *   `gray_linen_blue.png`
