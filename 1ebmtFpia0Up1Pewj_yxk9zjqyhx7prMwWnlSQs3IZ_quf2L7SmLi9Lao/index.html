@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ja" class="h-100">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    /* Sticky Footer設定 */
+    body { background-color: #f4f7f9; font-family: 'Segoe UI', sans-serif; }
+    
+    /* コンテナ調整 */
+    .main-container { max-width: 900px; margin-top: 30px; }
+    
+    /* 既存スタイル */
+    .cursor-pointer { cursor: pointer; }
+    .text-small { font-size: 0.85rem; }
+    .card { transition: transform 0.2s, box-shadow 0.2s; border: none; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(0,0,0,.1); }
+    .card.default-list { border: 2px solid #0d6efd; background-color: #f8fbff; }
+    .stat-pill { font-size: 0.75rem; padding: 0.35em 0.65em; border: 1px solid transparent; }
+    .stat-active { background-color: rgba(13, 110, 253, 0.1); color: #0d6efd; border-color: rgba(13, 110, 253, 0.2); }
+    .stat-done { background-color: rgba(25, 135, 84, 0.1); color: #198754; border-color: rgba(25, 135, 84, 0.2); }
+    .stat-deleted { background-color: rgba(108, 117, 125, 0.1); color: #6c757d; border-color: rgba(108, 117, 125, 0.2); }
+    .task-item { transition: background-color 0.15s; }
+    .task-item:hover { background-color: #f8f9fa; }
+    .task-completed { text-decoration: line-through; color: #adb5bd; }
+    .task-deleted { background-color: #fff5f5; color: #999; border-left: 3px solid #dc3545; }
+    .task-deleted .task-title { text-decoration: line-through; color: #dc3545; }
+    .task-notes { font-size: 0.8rem; color: #6c757d; white-space: pre-wrap; }
+    .view-section { display: none; }
+    .view-section.active { display: block; }
+    .id-display { font-size: 0.65rem; font-family: monospace; color: #adb5bd; }
+    .quick-action-card { border: 1px solid #cfe2ff; background-color: #ecf4ff; }
+  </style>
+</head>
+<body class="d-flex flex-column h-100">
+
+  <div class="container main-container flex-shrink-0 pb-5">
+    
+    <!-- Header Include -->
+    <?!= include('header'); ?>
+
+    <div id="loading" class="text-center my-5">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="mt-2 text-muted" id="loading-text">データを読み込み中...</p>
+    </div>
+
+    <!-- VIEW 1: タスクリスト一覧 -->
+    <div id="list-view" class="view-section active">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">タスクリスト一覧</h5>
+      </div>
+      <div id="task-list-container" class="row g-3"></div>
+    </div>
+
+    <!-- VIEW 2: タスク詳細・移動操作 -->
+    <div id="detail-view" class="view-section">
+      <div class="d-flex align-items-center mb-4">
+        <button class="btn btn-outline-secondary me-3" onclick="showListView()">
+          <i class="bi bi-arrow-left"></i> 戻る
+        </button>
+        <div>
+          <h4 class="mb-0" id="current-list-title">リスト名</h4>
+          <span class="id-display" id="current-list-id">ID: ...</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <!-- 左カラム: タスク選択 -->
+        <div class="col-lg-8">
+          <div class="card shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+              <div class="form-check mb-0">
+                <input class="form-check-input" type="checkbox" id="select-all-tasks" onchange="toggleSelectAll(this)">
+                <label class="form-check-label fw-bold" for="select-all-tasks">すべて選択</label>
+              </div>
+              <span class="badge bg-light text-dark border" id="task-count-badge">0 tasks</span>
+            </div>
+            <div class="list-group list-group-flush" id="tasks-container" style="max-height: 60vh; overflow-y: auto;"></div>
+          </div>
+        </div>
+
+        <!-- 右カラム: 操作パネル -->
+        <div class="col-lg-4 mt-4 mt-lg-0">
+          
+          <!-- Quick Action -->
+          <div class="card quick-action-card mb-3 sticky-top" style="top: 20px; z-index: 101;" id="quick-action-panel">
+            <div class="card-body">
+              <h6 class="card-title fw-bold text-primary mb-2">
+                <i class="bi bi-lightning-fill"></i> Quick Action
+              </h6>
+              <p class="small text-muted mb-3" style="font-size: 0.8rem; line-height: 1.4;">
+                ここにある全ての<strong>未完了タスク</strong>を、既定のリストへ即座に移動します。
+              </p>
+              <button class="btn btn-primary w-100 fw-bold shadow-sm" onclick="executeQuickMove()" id="quick-move-btn">
+                <i class="bi bi-box-arrow-in-right"></i> 全て既定リストへ移動
+              </button>
+            </div>
+          </div>
+
+          <!-- 通常操作パネル（移動＆削除） -->
+          <div class="card bg-light border-0" style="z-index: 100;">
+            <div class="card-body">
+              <h6 class="card-title fw-bold mb-3"><i class="bi bi-card-checklist"></i> 選択したタスクの操作</h6>
+              
+              <!-- 移動 -->
+              <div class="mb-3">
+                <label class="form-label small text-muted">移動先のリストを選択:</label>
+                <select class="form-select" id="target-list-select">
+                  <option value="" disabled selected>選択してください...</option>
+                </select>
+              </div>
+              <div class="d-grid gap-2 mb-4">
+                <button class="btn btn-outline-primary" onclick="executeMove()" id="move-btn" disabled>
+                  移動を実行
+                </button>
+              </div>
+              
+              <hr>
+
+              <!-- 削除 (NEW) -->
+              <div class="d-grid gap-2">
+                 <button class="btn btn-outline-danger" onclick="executeDeleteTasks()" id="delete-tasks-btn" disabled>
+                  <i class="bi bi-trash"></i> 削除を実行
+                </button>
+              </div>
+              <div class="small text-muted mt-2">
+                <i class="bi bi-info-circle"></i> 選択したタスクを完全に削除します。
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Danger Zone (リスト削除) -->
+          <div class="card border-danger mt-3 d-none" id="danger-zone-card">
+            <div class="card-body text-danger">
+              <h6 class="card-title fw-bold"><i class="bi bi-exclamation-triangle-fill"></i> Danger Zone</h6>
+              <p class="small mb-3">このタスクリスト自体を完全に削除します。中のタスクもすべて消え、元に戻せません。</p>
+              <button class="btn btn-outline-danger w-100" onclick="confirmDeleteList()">
+                <i class="bi bi-trash"></i> リストを削除
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer Include -->
+  <?!= include('footer'); ?>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    let allTaskLists = [];
+    let currentTasks = [];
+    let currentListId = null;
+
+    window.addEventListener('DOMContentLoaded', () => fetchLists());
+
+    function fetchLists(forceRefresh = false) {
+      showLoading(true, 'リスト情報を更新中...');
+      google.script.run
+        .withSuccessHandler(onListsLoaded)
+        .withFailureHandler(handleError)
+        .getTaskLists(forceRefresh);
+    }
+
+    function onListsLoaded(lists) {
+      allTaskLists = lists;
+      showLoading(false);
+      renderTaskLists(lists);
+    }
+
+    function refreshAll() {
+      if (currentListId) {
+        loadListDetails(currentListId, document.getElementById('current-list-title').innerText);
+      } else {
+        fetchLists(true);
+      }
+    }
+
+    function showLoading(show, text = 'Loading...') {
+      const loader = document.getElementById('loading');
+      document.getElementById('loading-text').innerText = text;
+      loader.style.display = show ? 'block' : 'none';
+    }
+
+    function showListView() {
+      document.getElementById('detail-view').classList.remove('active');
+      document.getElementById('list-view').classList.add('active');
+      currentListId = null;
+      fetchLists(false);
+    }
+
+    function showDetailView() {
+      document.getElementById('list-view').classList.remove('active');
+      document.getElementById('detail-view').classList.add('active');
+    }
+
+    function renderTaskLists(lists) {
+      const container = document.getElementById('task-list-container');
+      if (lists.length === 0) {
+        container.innerHTML = '<div class="col-12 text-center text-muted">タスクリストが見つかりません。</div>';
+        return;
+      }
+      container.innerHTML = lists.map(list => {
+        const previewContent = list.previewTasks.length > 0
+          ? `<ul class='mb-0 ps-3'>${list.previewTasks.map(t => `<li>${escapeHtml(t)}</li>`).join('')}</ul>`
+          : '<em class="text-muted">タスクなし</em>';
+        const cardClass = list.isDefault ? 'default-list' : '';
+        const badgeHtml = list.isDefault ? `<span class="badge bg-primary ms-2 align-middle"><i class="bi bi-star-fill"></i> Default</span>` : '';
+        return `
+        <div class="col-md-6 col-lg-4">
+          <div class="card h-100 ${cardClass}">
+            <div class="card-body d-flex flex-column">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <h5 class="card-title mb-0 d-inline-block align-middle">${escapeHtml(list.title)}</h5>
+                  ${badgeHtml}
+                </div>
+                <span class="badge bg-light text-dark border rounded-pill stats-badge cursor-pointer"
+                      data-bs-toggle="popover" data-bs-trigger="hover focus" data-bs-html="true"
+                      data-bs-title="Recent Active Tasks" data-bs-content="${previewContent}">
+                  <i class="bi bi-list"></i>
+                </span>
+              </div>
+              <div class="id-display mb-3">ID: ${list.id}</div>
+              <div class="d-flex gap-2 flex-wrap mb-3">
+                <span class="badge rounded-pill stat-pill stat-active" title="Active (未完了)">
+                  <i class="bi bi-play-circle-fill me-1"></i>${list.stats.active}
+                </span>
+                <span class="badge rounded-pill stat-pill stat-done" title="Completed (完了)">
+                  <i class="bi bi-check-circle-fill me-1"></i>${list.stats.completed}
+                </span>
+                <span class="badge rounded-pill stat-pill stat-deleted" title="Deleted (ゴミ箱)">
+                  <i class="bi bi-trash-fill me-1"></i>${list.stats.deleted}
+                </span>
+              </div>
+              <div class="mt-auto pt-3 border-top border-opacity-10 d-flex justify-content-between text-small text-muted">
+                 <span>Latest: ${list.newestDate ? new Date(list.newestDate).toLocaleDateString() : '-'}</span>
+              </div>
+              <button class="btn btn-outline-primary btn-sm w-100 mt-3" 
+                      onclick="loadListDetails('${list.id}', '${escapeHtml(list.title)}')">詳細・移動</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+      initPopovers();
+    }
+
+    function loadListDetails(listId, listTitle) {
+      currentListId = listId;
+      document.getElementById('current-list-title').innerText = listTitle;
+      document.getElementById('current-list-id').innerText = listId;
+      showLoading(true, 'タスクを取得中...');
+      showDetailView();
+      const currentListObj = allTaskLists.find(l => l.id === listId);
+      const isDefault = currentListObj ? currentListObj.isDefault : false;
+      document.getElementById('danger-zone-card').classList.toggle('d-none', isDefault);
+      document.getElementById('quick-action-panel').classList.toggle('d-none', isDefault);
+      const targetSelect = document.getElementById('target-list-select');
+      targetSelect.innerHTML = '<option value="" disabled selected>選択してください...</option>';
+      allTaskLists.forEach(list => {
+        if (list.id !== listId) {
+          const option = document.createElement('option');
+          option.value = list.id;
+          option.text = list.title + (list.isDefault ? ' (Default)' : '');
+          if (list.isDefault) option.style.fontWeight = 'bold';
+          targetSelect.add(option);
+        }
+      });
+      google.script.run
+        .withSuccessHandler(renderTasks)
+        .withFailureHandler(handleError)
+        .getTasks(listId);
+    }
+
+    function renderTasks(tasks) {
+      currentTasks = tasks;
+      showLoading(false);
+      const container = document.getElementById('tasks-container');
+      document.getElementById('task-count-badge').innerText = `${tasks.length} tasks`;
+      document.getElementById('select-all-tasks').checked = false;
+      updateMoveButtonState();
+
+      const activeTasksCount = tasks.filter(t => !t.deleted && t.status !== 'completed').length;
+      const quickMoveBtn = document.getElementById('quick-move-btn');
+      quickMoveBtn.disabled = activeTasksCount === 0;
+      quickMoveBtn.innerHTML = activeTasksCount === 0 
+        ? '<i class="bi bi-check-all"></i> 未完了タスクなし' 
+        : `<i class="bi bi-box-arrow-in-right"></i> 全て既定リストへ移動 (${activeTasksCount}件)`;
+
+      if (tasks.length === 0) {
+        container.innerHTML = '<div class="text-center py-5 text-muted">タスクがありません</div>';
+        return;
+      }
+
+      container.innerHTML = tasks.map(task => {
+        const isDeleted = !!task.deleted;
+        const isCompleted = task.status === 'completed';
+        let wrapperClass = '', iconHtml = '', titleClass = '', dateStr = '';
+        const isDisabled = isDeleted ? 'disabled' : '';
+        if (isDeleted) {
+          wrapperClass = 'task-deleted';
+          iconHtml = '<i class="bi bi-trash-fill me-2"></i>';
+          titleClass = 'task-title';
+        } else if (isCompleted) {
+          wrapperClass = 'task-completed';
+          iconHtml = '<i class="bi bi-check-circle-fill text-success me-2"></i>';
+        } else {
+          iconHtml = '<i class="bi bi-circle text-muted me-2"></i>';
+          titleClass = 'fw-medium';
+          if (task.due) dateStr = `<small class="ms-2 badge bg-light text-secondary border"><i class="bi bi-calendar"></i> ${new Date(task.due).toLocaleDateString()}</small>`;
+        }
+        return `
+        <label class="list-group-item task-item d-flex align-items-start py-3 ${wrapperClass}">
+          <input class="form-check-input me-3 mt-1 task-checkbox" type="checkbox" 
+                 value="${task.id}" onchange="updateMoveButtonState()" ${isDisabled}>
+          <div class="flex-grow-1">
+            <div class="d-flex align-items-center mb-1">
+              ${iconHtml}
+              <span class="${titleClass}">${escapeHtml(task.title)}</span>
+              ${dateStr}
+            </div>
+            ${task.notes ? `<div class="task-notes ms-4">${escapeHtml(task.notes)}</div>` : ''}
+          </div>
+        </label>`;
+      }).join('');
+    }
+
+    function toggleSelectAll(checkbox) {
+      document.querySelectorAll('.task-checkbox:not(:disabled)').forEach(cb => cb.checked = checkbox.checked);
+      updateMoveButtonState();
+    }
+
+    function updateMoveButtonState() {
+      const selectedCount = document.querySelectorAll('.task-checkbox:checked').length;
+      const targetSelected = document.getElementById('target-list-select').value !== "";
+      
+      const moveBtn = document.getElementById('move-btn');
+      moveBtn.disabled = selectedCount === 0 || !targetSelected;
+      moveBtn.innerText = selectedCount > 0 ? `${selectedCount}件を移動する` : '移動を実行';
+
+      const deleteBtn = document.getElementById('delete-tasks-btn');
+      if (deleteBtn) {
+        deleteBtn.disabled = selectedCount === 0;
+        deleteBtn.innerText = selectedCount > 0 ? `${selectedCount}件を削除する` : '削除を実行';
+      }
+    }
+    
+    document.getElementById('target-list-select').addEventListener('change', updateMoveButtonState);
+
+    // --- Actions ---
+
+    function executeQuickMove() {
+      if (!currentListId) return;
+      const defaultList = allTaskLists.find(l => l.isDefault);
+      if (!defaultList) return alert('エラー: 既定のリストが見つかりません。');
+      const activeTasks = currentTasks.filter(t => !t.deleted && t.status !== 'completed');
+      const taskIds = activeTasks.map(t => t.id);
+      if (taskIds.length === 0) return alert('移動対象となる未完了タスクがありません。');
+      if (!confirm(`【Quick Move】\n\n${taskIds.length}件の未完了タスクを\n既定のリスト「${defaultList.title}」へ移動します。\n\nよろしいですか？`)) return;
+
+      showLoading(true, 'Quick Moveを実行中...');
+      google.script.run
+        .withSuccessHandler(handleMoveResult)
+        .withFailureHandler(handleError)
+        .moveTasks(currentListId, defaultList.id, taskIds);
+    }
+
+    function executeMove() {
+      const targetListId = document.getElementById('target-list-select').value;
+      const taskIds = Array.from(document.querySelectorAll('.task-checkbox:checked')).map(cb => cb.value);
+      if (!targetListId || taskIds.length === 0) return;
+      if (!confirm(`${taskIds.length}件のタスクを移動しますか？\n（移動元からは削除されます）`)) return;
+
+      showLoading(true, 'タスクを移動中...');
+      google.script.run
+        .withSuccessHandler(handleMoveResult)
+        .withFailureHandler(handleError)
+        .moveTasks(currentListId, targetListId, taskIds);
+    }
+
+    function executeDeleteTasks() {
+      const taskIds = Array.from(document.querySelectorAll('.task-checkbox:checked')).map(cb => cb.value);
+      if (taskIds.length === 0) return;
+      
+      const msg = `【警告】\n選択した ${taskIds.length} 件のタスクを削除します。\n\nこの操作は取り消せません。\nよろしいですか？`;
+      if (!confirm(msg)) return;
+
+      showLoading(true, 'タスクを削除中...');
+      google.script.run
+        .withSuccessHandler(handleMoveResult)
+        .withFailureHandler(handleError)
+        .deleteTasks(currentListId, taskIds);
+    }
+
+    function handleMoveResult(result) {
+      if (result.fatalError) {
+        showLoading(false);
+        alert('深刻なエラーが発生しました:\n' + result.fatalError);
+        return;
+      }
+
+      const successCount = result.success.length;
+      const failCount = result.failed.length;
+      
+      let msg = `${successCount}件の処理が完了しました。`;
+      
+      if (failCount > 0) {
+        msg += `\n\n【失敗】${failCount}件\n以下のエラーが発生しました:\n`;
+        result.failed.forEach(f => {
+          msg += `- タスクIDの一部(${f.id.substr(0,5)}...): ${f.error}\n`;
+        });
+      }
+      
+      alert(msg);
+      
+      fetchLists(true);
+      loadListDetails(currentListId, document.getElementById('current-list-title').innerText);
+    }
+
+    function confirmDeleteList() {
+      if (!currentListId) return;
+      if (!confirm("【警告】\nこのタスクリストを本当に削除しますか？\n\n・このリスト内のすべてのタスクが削除されます。\n・この操作は取り消せません。\n\nよろしければ「OK」を押してください。")) return;
+      showLoading(true, 'タスクリストを削除中...');
+      google.script.run
+        .withSuccessHandler(() => {
+          alert('タスクリストを削除しました。');
+          showListView();
+        })
+        .withFailureHandler(handleError)
+        .deleteTaskList(currentListId);
+    }
+
+    function initPopovers() {
+      [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]')).map(el => new bootstrap.Popover(el));
+    }
+
+    function handleError(error) {
+      console.error('GAS Error Object:', error);
+      showLoading(false);
+      const errorDetail = typeof error === 'object' ? JSON.stringify(error) : error;
+      alert('システムエラーが発生しました:\n' + error.message + '\n\n詳細:\n' + errorDetail);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/[&<>"']/g, match => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[match]);
+    }
+  </script>
+</body>
+</html>
