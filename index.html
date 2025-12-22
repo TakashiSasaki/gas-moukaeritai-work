@@ -58,6 +58,9 @@
                 <button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home" type="button" role="tab" aria-controls="home" aria-selected="true">ホーム</button>
             </li>
             <li class="nav-item" role="presentation">
+                <button class="nav-link" id="find-tab" data-bs-toggle="tab" data-bs-target="#find" type="button" role="tab" aria-controls="find" aria-selected="false">検索 (Find)</button>
+            </li>
+            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="readme-tab" data-bs-toggle="tab" data-bs-target="#readme" type="button" role="tab" aria-controls="readme" aria-selected="false">README.md</button>
             </li>
         </ul>
@@ -71,8 +74,7 @@
                     <h1 class="display-4">Welcome to moukaeritai.work</h1>
                     <p class="lead">Google Apps Script プロジェクトのハブサイトへようこそ。</p>
                     <hr class="my-4" style="border-color: rgba(255,255,255,0.5);">
-                    <p>プロジェクトの検索や詳細情報の閲覧は、検索ページから行えます。</p>
-                    <a class="btn btn-light btn-lg" href="find.html" role="button">プロジェクト検索へ (Find)</a>
+                    <p>プロジェクトの検索や詳細情報の閲覧は、検索タブから行えます。</p>
                 </div>
 
                 <div class="row">
@@ -98,6 +100,15 @@
                                 </p>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Find Tab -->
+            <div class="tab-pane fade" id="find" role="tabpanel" aria-labelledby="find-tab">
+                <div class="card">
+                    <div class="card-body p-0">
+                        <iframe id="find-iframe" src="find.html" style="width: 100%; border: none; min-height: 80vh;"></iframe>
                     </div>
                 </div>
             </div>
@@ -145,6 +156,44 @@
             const readmeTab = document.getElementById('readme-tab');
             const readmeContent = document.getElementById('readme-content');
             let readmeLoaded = false;
+            
+            const findTab = document.getElementById('find-tab');
+            const findIframe = document.getElementById('find-iframe');
+
+            findTab.addEventListener('shown.bs.tab', function() {
+                 if (findIframe) {
+                    try {
+                        const iframeDoc = findIframe.contentWindow.document;
+                         if (iframeDoc.body) {
+                            findIframe.style.height = iframeDoc.body.scrollHeight + 'px';
+                             // ResizeObserver to handle dynamic content changes inside iframe
+                            const resizeObserver = new ResizeObserver(() => {
+                                findIframe.style.height = iframeDoc.body.scrollHeight + 'px';
+                            });
+                            resizeObserver.observe(iframeDoc.body);
+                         }
+                    } catch(e) {
+                        console.log("Cross-origin iframe access restricted or content not loaded yet.");
+                    }
+                 }
+            });
+
+            // Handle iframe load event as well
+            if(findIframe) {
+                findIframe.addEventListener('load', function() {
+                     try {
+                        const iframeDoc = this.contentWindow.document;
+                        this.style.height = iframeDoc.body.scrollHeight + 'px';
+                        
+                        const resizeObserver = new ResizeObserver(() => {
+                             this.style.height = iframeDoc.body.scrollHeight + 'px';
+                        });
+                        resizeObserver.observe(iframeDoc.body);
+                    } catch(e) {
+                         console.log("Cross-origin iframe access restricted.");
+                    }
+                });
+            }
 
             readmeTab.addEventListener('shown.bs.tab', function (event) {
                 if (!readmeLoaded) {
