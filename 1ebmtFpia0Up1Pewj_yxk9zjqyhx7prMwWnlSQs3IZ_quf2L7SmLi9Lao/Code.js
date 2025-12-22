@@ -9,9 +9,35 @@ const CONFIG = {
     PREFIX_DEFAULT: 'sys_def_id'
   },
   API: {
-    SLEEP_MS: 500 // APIリクエスト間の待機時間(ミリ秒) - 安定性向上のため
+    SLEEP_MS: 500
   }
 };
+
+/**
+ * Webアプリケーションのエントリーポイント (ルーティング機能付き)
+ */
+function doGet(e) {
+  // ?page=readme が指定された場合はドキュメントを表示
+  if (e.parameter.page === 'readme') {
+    return HtmlService.createTemplateFromFile('README')
+      .evaluate()
+      .setTitle('Google Tasks Manager - Help')
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
+
+  // デフォルトはメインアプリを表示
+  return HtmlService.createTemplateFromFile('index')
+    .evaluate()
+    .setTitle('Google Tasks Manager')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+/**
+ * フロントエンドから現在のアプリURLを取得するための関数
+ */
+function getScriptUrl() {
+  return ScriptApp.getService().getUrl();
+}
 
 /**
  * ユーザーの全タスクリストを取得
@@ -61,7 +87,6 @@ function getTaskLists(forceRefresh = false) {
  * 統計情報の計算
  */
 function fetchAndComputeListStats(listId) {
-  // レートリミット回避のため少し待つ
   Utilities.sleep(100); 
   
   const tasksResponse = Tasks.Tasks.list(listId, { showHidden: true, showDeleted: true, maxResults: 100 });
@@ -111,14 +136,13 @@ function getTasks(taskListId) {
 }
 
 /**
- * タスク移動（レートリミット対策・堅牢化版）
+ * タスク移動
  */
 function moveTasks(sourceListId, targetListId, taskIds) {
   const results = { success: [], failed: [], fatalError: null };
 
   try {
     taskIds.forEach((taskId, index) => {
-      // 連続実行によるAPIエラーを防ぐため、リクエスト間に待機時間を設ける
       if (index > 0) Utilities.sleep(CONFIG.API.SLEEP_MS);
 
       try {
@@ -126,7 +150,6 @@ function moveTasks(sourceListId, targetListId, taskIds) {
         try {
            originalTask = Tasks.Tasks.get(sourceListId, taskId);
         } catch (getError) {
-           // すでに削除されている等の理由で取得できない場合はスキップ
            console.warn(`Task ${taskId} not found or already deleted.`);
            return; 
         }
@@ -140,12 +163,11 @@ function moveTasks(sourceListId, targetListId, taskIds) {
         
         if (insertedTask && insertedTask.id) {
           try {
-            Utilities.sleep(200); // 削除前にも少し待つ
+            Utilities.sleep(200);
             Tasks.Tasks.remove(sourceListId, taskId);
             results.success.push(taskId);
           } catch (deleteError) {
             console.warn(`Copy successful but delete failed for ${taskId}: ${deleteError.message}`);
-            // コピーは成功しているので、ユーザーには警告として伝える
             results.failed.push({ 
               id: taskId, 
               error: '移動先にコピーされましたが、元のタスクを削除できませんでした（一時的なAPIエラーの可能性があります）。' 
@@ -173,13 +195,12 @@ function moveTasks(sourceListId, targetListId, taskIds) {
 }
 
 /**
- * タスク削除（レートリミット対策版）
+ * タスク削除
  */
 function deleteTasks(listId, taskIds) {
   const results = { success: [], failed: [], fatalError: null };
   try {
     taskIds.forEach((taskId, index) => {
-      // 連続実行によるAPIエラーを防ぐため待機
       if (index > 0) Utilities.sleep(CONFIG.API.SLEEP_MS);
 
       try {
@@ -189,7 +210,6 @@ function deleteTasks(listId, taskIds) {
         console.error(`Failed to delete task ${taskId}:`, e);
         let errorMsg = e.message;
         if (errorMsg.includes('Not Found')) {
-          // すでにない場合は成功とみなす
           results.success.push(taskId);
         } else {
           results.failed.push({ id: taskId, error: errorMsg });
