@@ -1,156 +1,232 @@
 /**
- * ユーザーの全タスクリストを取得し、統計情報を含めて返します。
- * UserCacheを利用してリストデータおよびデフォルトリストIDをキャッシュし、API消費を最小限に抑えます。
- * * @param {boolean} forceRefresh キャッシュを無視して強制的にデータを更新するかどうか
- * @return {Array<Object>} タスクリスト情報の配列
+ * 構成定数
+ */
+const CONFIG = {
+  CACHE: {
+    VERSION: 'v2',
+    TTL: 600,
+    PREFIX_STATS: 'stats_', 
+    PREFIX_DEFAULT: 'sys_def_id'
+  },
+  API: {
+    SLEEP_MS: 500 // APIリクエスト間の待機時間(ミリ秒) - 安定性向上のため
+  }
+};
+
+/**
+ * ユーザーの全タスクリストを取得
  */
 function getTaskLists(forceRefresh = false) {
   const cache = CacheService.getUserCache();
-  const DATA_CACHE_KEY = 'task_lists_data_v1';
-  const DEFAULT_ID_CACHE_KEY = 'default_task_list_id';
-  const CACHE_DURATION_SEC = 600; // 10分
-
-  // 1. キャッシュがあればそれを返す
-  if (!forceRefresh) {
-    const cachedData = cache.get(DATA_CACHE_KEY);
-    if (cachedData) {
-      console.log('Serving list data from cache');
-      return JSON.parse(cachedData);
-    }
-  }
-
   try {
-    console.log('Fetching from API');
-    
-    // 2. 全タスクリストを取得
     const taskLists = Tasks.Tasklists.list();
     if (!taskLists.items) return [];
 
-    // 3. デフォルトリストIDの解決（キャッシュ戦略付き）
-    let defaultListId = cache.get(DEFAULT_ID_CACHE_KEY);
-    
-    if (!defaultListId || forceRefresh) {
+    let defaultListId = null;
+    if (!forceRefresh) defaultListId = cache.get(getKey(CONFIG.CACHE.PREFIX_DEFAULT));
+    if (!defaultListId) {
       try {
-        // API経由で @default の実体IDを取得
-        defaultListId = Tasks.Tasklists.get('@default').id;
-        // ID単体をキャッシュに保存
-        cache.put(DEFAULT_ID_CACHE_KEY, defaultListId, CACHE_DURATION_SEC);
-        console.log('Default list ID resolved and cached:', defaultListId);
-      } catch (e) {
-        console.warn('デフォルトリストの特定に失敗:', e);
-      }
-    } else {
-      console.log('Using cached default list ID:', defaultListId);
+        const defaultList = Tasks.Tasklists.get('@default');
+        defaultListId = defaultList.id;
+        cache.put(getKey(CONFIG.CACHE.PREFIX_DEFAULT), defaultListId, CONFIG.CACHE.TTL);
+      } catch (e) { console.warn('デフォルトリスト特定失敗:', e); }
     }
 
-    // 4. データ整形と統計計算
-    const result = taskLists.items.map(list => {
-      // 統計用タスク取得（maxResults等は適宜調整）
-      const tasksResponse = Tasks.Tasks.list(list.id, {
-        showHidden: true,
-        maxResults: 100
-      });
-      
-      const tasks = tasksResponse.items || [];
-      const taskCount = tasks.length;
-      
-      let oldestDate = null;
-      let newestDate = null;
-      let previewTasks = [];
+    const cacheKeys = taskLists.items.map(list => getListStatsKey(list.id));
+    const cachedBlobs = forceRefresh ? {} : cache.getAll(cacheKeys);
 
-      if (taskCount > 0) {
-        const validTasks = tasks.filter(t => t.updated);
-        const timestamps = validTasks.map(t => new Date(t.updated).getTime());
+    return taskLists.items.map(list => {
+      const key = getListStatsKey(list.id);
+      const cachedJson = cachedBlobs[key];
+      let statsData;
 
-        if (timestamps.length > 0) {
-          oldestDate = new Date(Math.min(...timestamps)).toISOString();
-          newestDate = new Date(Math.max(...timestamps)).toISOString();
-        }
-
-        previewTasks = validTasks
-          .filter(t => t.title && t.title.trim() !== "")
-          .sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime())
-          .slice(0, 5)
-          .map(t => t.title);
+      if (cachedJson) {
+        try { statsData = JSON.parse(cachedJson); } catch (e) { console.warn('キャッシュ破損:', e); }
       }
 
-      return {
-        id: list.id,
-        title: list.title,
-        updated: list.updated,
-        isDefault: list.id === defaultListId, // ここで判定
-        taskCount: taskCount,
-        oldestDate: oldestDate,
-        newestDate: newestDate,
-        previewTasks: previewTasks
-      };
+      if (!statsData) {
+        statsData = fetchAndComputeListStats(list.id);
+        try { cache.put(key, JSON.stringify(statsData), CONFIG.CACHE.TTL); } catch (e) { console.warn('Cache put failed:', e); }
+      }
+
+      return { ...list, ...statsData, isDefault: list.id === defaultListId };
     });
-
-    // 5. 結果セット全体をキャッシュ
-    try {
-      cache.put(DATA_CACHE_KEY, JSON.stringify(result), CACHE_DURATION_SEC);
-    } catch (e) {
-      console.warn('Data cache failed (size limit):', e);
-    }
-
-    return result;
-
   } catch (error) {
     console.error('getTaskLists Error:', error);
-    throw new Error('データ取得に失敗しました: ' + error.message);
+    throw new Error('タスクリスト取得失敗: ' + error.message);
   }
 }
 
 /**
- * 特定のリスト内のタスク一覧を取得
+ * 統計情報の計算
+ */
+function fetchAndComputeListStats(listId) {
+  // レートリミット回避のため少し待つ
+  Utilities.sleep(100); 
+  
+  const tasksResponse = Tasks.Tasks.list(listId, { showHidden: true, showDeleted: true, maxResults: 100 });
+  const tasks = tasksResponse.items || [];
+  let activeCount = 0, completedCount = 0, deletedCount = 0, timestamps = [], validTasksForPreview = [];
+
+  tasks.forEach(t => {
+    if (t.updated) timestamps.push(new Date(t.updated).getTime());
+    if (t.deleted === true || t.deleted === 'true') deletedCount++;
+    else if (t.status === 'completed') completedCount++;
+    else {
+      activeCount++;
+      if (t.title && t.title.trim() !== "") validTasksForPreview.push(t);
+    }
+  });
+
+  let oldestDate = null, newestDate = null;
+  if (timestamps.length > 0) {
+    oldestDate = new Date(Math.min(...timestamps)).toISOString();
+    newestDate = new Date(Math.max(...timestamps)).toISOString();
+  }
+  const previewTasks = validTasksForPreview
+    .sort((a, b) => new Date(b.updated).getTime() - new Date(a.updated).getTime())
+    .slice(0, 5).map(t => t.title);
+
+  return {
+    stats: { total: tasks.length, active: activeCount, completed: completedCount, deleted: deletedCount },
+    oldestDate, newestDate, previewTasks
+  };
+}
+
+/**
+ * タスク詳細取得
  */
 function getTasks(taskListId) {
   try {
-    const tasks = Tasks.Tasks.list(taskListId);
+    const tasks = Tasks.Tasks.list(taskListId, { showHidden: true, showDeleted: true, maxResults: 100 });
     if (!tasks.items) return [];
-    
     return tasks.items.map(task => ({
-      id: task.id,
-      title: task.title,
-      status: task.status,
-      due: task.due,
-      notes: task.notes
+      id: task.id, title: task.title, status: task.status, due: task.due, notes: task.notes,
+      updated: task.updated, deleted: !!task.deleted
     }));
   } catch (error) {
     console.error('getTasks Error:', error);
-    throw new Error('タスク取得失敗');
+    throw new Error('タスク詳細取得失敗: ' + error.message);
   }
 }
 
 /**
- * デバッグ用: デフォルトリストIDの解決結果をコンソールに出力します。
- * 手動実行して、@default がどのIDにマッピングされているか確認してください。
+ * タスク移動（レートリミット対策・堅牢化版）
  */
-function debugDefaultListId() {
+function moveTasks(sourceListId, targetListId, taskIds) {
+  const results = { success: [], failed: [], fatalError: null };
+
   try {
-    console.log('--- Debugging Default List ID ---');
-    
-    // 1. @default を直接取得
-    const defaultList = Tasks.Tasklists.get('@default');
-    console.log('Resolved @default to:');
-    console.log('  Title:', defaultList.title);
-    console.log('  ID:', defaultList.id);
-    
-    // 2. 全リストを取得して照合
-    const allLists = Tasks.Tasklists.list().items;
-    const found = allLists.find(l => l.id === defaultList.id);
-    
-    if (found) {
-      console.log('MATCH: Found corresponding list in Tasklists.list()');
-      console.log('  Matched List Title:', found.title);
-      console.log('  Matched List ID:', found.id);
-    } else {
-      console.error('MISMATCH: The resolved default ID was NOT found in the full list.');
+    taskIds.forEach((taskId, index) => {
+      // 連続実行によるAPIエラーを防ぐため、リクエスト間に待機時間を設ける
+      if (index > 0) Utilities.sleep(CONFIG.API.SLEEP_MS);
+
+      try {
+        let originalTask;
+        try {
+           originalTask = Tasks.Tasks.get(sourceListId, taskId);
+        } catch (getError) {
+           // すでに削除されている等の理由で取得できない場合はスキップ
+           console.warn(`Task ${taskId} not found or already deleted.`);
+           return; 
+        }
+        
+        const newTaskResource = { title: originalTask.title || "" };
+        if (originalTask.notes) newTaskResource.notes = originalTask.notes;
+        if (originalTask.due) newTaskResource.due = originalTask.due;
+        if (originalTask.status) newTaskResource.status = originalTask.status;
+
+        const insertedTask = Tasks.Tasks.insert(newTaskResource, targetListId);
+        
+        if (insertedTask && insertedTask.id) {
+          try {
+            Utilities.sleep(200); // 削除前にも少し待つ
+            Tasks.Tasks.remove(sourceListId, taskId);
+            results.success.push(taskId);
+          } catch (deleteError) {
+            console.warn(`Copy successful but delete failed for ${taskId}: ${deleteError.message}`);
+            // コピーは成功しているので、ユーザーには警告として伝える
+            results.failed.push({ 
+              id: taskId, 
+              error: '移動先にコピーされましたが、元のタスクを削除できませんでした（一時的なAPIエラーの可能性があります）。' 
+            });
+          }
+        } else {
+          throw new Error('Insert failed (No ID returned)');
+        }
+      } catch (e) {
+        console.error(`Failed to move task ${taskId}:`, e);
+        results.failed.push({ id: taskId, error: e.message });
+      }
+    });
+
+    try {
+      const cache = CacheService.getUserCache();
+      cache.removeAll([getListStatsKey(sourceListId), getListStatsKey(targetListId)]);
+    } catch (cacheError) { console.warn('Cache invalidation failed:', cacheError); }
+
+  } catch (fatal) {
+    console.error('moveTasks Fatal Error:', fatal);
+    results.fatalError = fatal.toString();
+  }
+  return results;
+}
+
+/**
+ * タスク削除（レートリミット対策版）
+ */
+function deleteTasks(listId, taskIds) {
+  const results = { success: [], failed: [], fatalError: null };
+  try {
+    taskIds.forEach((taskId, index) => {
+      // 連続実行によるAPIエラーを防ぐため待機
+      if (index > 0) Utilities.sleep(CONFIG.API.SLEEP_MS);
+
+      try {
+        Tasks.Tasks.remove(listId, taskId);
+        results.success.push(taskId);
+      } catch (e) {
+        console.error(`Failed to delete task ${taskId}:`, e);
+        let errorMsg = e.message;
+        if (errorMsg.includes('Not Found')) {
+          // すでにない場合は成功とみなす
+          results.success.push(taskId);
+        } else {
+          results.failed.push({ id: taskId, error: errorMsg });
+        }
+      }
+    });
+    try { CacheService.getUserCache().remove(getListStatsKey(listId)); } catch (e) {}
+  } catch (fatal) {
+    console.error('deleteTasks Fatal Error:', fatal);
+    results.fatalError = fatal.toString();
+  }
+  return results;
+}
+
+/**
+ * リスト削除
+ */
+function deleteTaskList(taskListId) {
+  try {
+    const cache = CacheService.getUserCache();
+    const defaultId = cache.get(getKey(CONFIG.CACHE.PREFIX_DEFAULT));
+    let defaultListReal;
+    try { defaultListReal = Tasks.Tasklists.get('@default'); } catch(e) {}
+
+    if (taskListId === defaultId || (defaultListReal && taskListId === defaultListReal.id)) {
+       throw new Error('このリストは「デフォルトリスト」のため、削除できません。');
     }
-    
-    console.log('---------------------------------');
-    return defaultList.id;
+
+    Tasks.Tasklists.remove(taskListId);
+    cache.remove(getListStatsKey(taskListId));
+
+    return { success: true };
   } catch (e) {
-    console.error('Debug execution failed:', e);
+    console.error('deleteTaskList Error:', e);
+    throw new Error('リスト削除失敗: ' + e.message);
   }
 }
+
+function getKey(keyName) { return `${CONFIG.CACHE.VERSION}_${keyName}`; }
+function getListStatsKey(listId) { return getKey(`${CONFIG.CACHE.PREFIX_STATS}${listId}`); }

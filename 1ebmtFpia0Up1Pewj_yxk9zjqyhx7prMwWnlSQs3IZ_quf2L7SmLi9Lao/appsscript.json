@@ -14,5 +14,9 @@
   "webapp": {
     "executeAs": "USER_DEPLOYING",
     "access": "MYSELF"
-  }
+  },
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/tasks",
+    "https://www.googleapis.com/auth/script.webapp.deploy"
+  ]
 }
