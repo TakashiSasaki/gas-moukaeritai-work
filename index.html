@@ -39,6 +39,12 @@
 </head>
 <body>
     <div class="position-absolute top-0 end-0 p-3">
+        <button id="reload-btn" class="btn btn-sm btn-outline-danger me-2" title="キャッシュを削除してリロード">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+            </svg>
+        </button>
         <a href="https://moukaeritai.work" class="btn btn-sm btn-outline-secondary">
             <img src="moukaeritai-pictgram/64x64.webp/slate_teal.webp" alt="" width="16" height="16" class="me-1">
             moukaeritai.work
@@ -67,7 +73,6 @@
                     <hr class="my-4" style="border-color: rgba(255,255,255,0.5);">
                     <p>プロジェクトの検索や詳細情報の閲覧は、検索ページから行えます。</p>
                     <a class="btn btn-light btn-lg" href="find.html" role="button">プロジェクト検索へ (Find)</a>
-                    <a class="btn btn-outline-light btn-lg ms-2" href="https://github.com/TakashiSasaki/gas.moukaeritai.work" role="button" target="_blank">GitHub Repository</a>
                 </div>
 
                 <div class="row">
@@ -117,6 +122,10 @@
     <footer class="footer">
         <div class="container">
             <span class="text-muted">&copy; 2025 GAS もっと帰りたい. All Rights Reserved.</span>
+            <br>
+            <span class="text-muted">Created by <a href="https://x.com/TakashiSasaki" target="_blank">Takashi Sasaki</a></span>
+            <br>
+            <span class="text-muted"><a href="https://github.com/TakashiSasaki/gas.moukaeritai.work" target="_blank">GitHub Repository</a></span>
         </div>
     </footer>
 
@@ -148,6 +157,18 @@
         });
     </script>
     <script>
+        document.getElementById('reload-btn').addEventListener('click', async () => {
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (let registration of registrations) {
+                    await registration.unregister();
+                }
+            }
+            const keys = await caches.keys();
+            await Promise.all(keys.map(key => caches.delete(key)));
+            window.location.reload(true);
+        });
+
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('sw.js')

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'moukaeritai-work-v20251222-0740';
+const CACHE_NAME = 'moukaeritai-work-v20251222-0741';
 const urlsToCache = [
   './',
   './index.html',
