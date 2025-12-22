@@ -14,22 +14,30 @@ const CONFIG = {
 };
 
 /**
- * Webアプリケーションのエントリーポイント (ルーティング機能付き)
+ * Webアプリケーションのエントリーポイント
  */
 function doGet(e) {
   // ?page=readme が指定された場合はドキュメントを表示
   if (e.parameter.page === 'readme') {
     return HtmlService.createTemplateFromFile('README')
       .evaluate()
-      .setTitle('Google Tasks Manager - Help')
+      .setTitle('Google Tasks Overview - Help')
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
 
   // デフォルトはメインアプリを表示
   return HtmlService.createTemplateFromFile('index')
     .evaluate()
-    .setTitle('Google Tasks Manager')
+    .setTitle('Google Tasks Overview')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+/**
+ * HTMLテンプレート内で外部ファイルを読み込むためのヘルパー関数
+ * ★修正: インクルード先のスクリプトも評価するように変更
+ */
+function include(filename) {
+  return HtmlService.createTemplateFromFile(filename).evaluate().getContent();
 }
 
 /**

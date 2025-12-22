@@ -1,0 +1,79 @@
+<footer class="mt-auto py-3 bg-light border-top">
+  <div class="container text-center">
+    
+    <!-- App URL Display & Copy Section -->
+    <div class="row justify-content-center mb-3">
+      <div class="col-md-8 col-lg-6">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text bg-white text-muted border-end-0">App URL</span>
+          <input type="text" class="form-control border-start-0 text-muted" 
+                 id="app-url-input" 
+                 value="<?= getScriptUrl() ?>" 
+                 readonly 
+                 onclick="this.select()"
+                 style="font-family: monospace; font-size: 0.8rem; background-color: #fff;">
+          <button class="btn btn-outline-secondary" type="button" onclick="copyAppUrl(this)" title="クリップボードにコピー">
+            <i class="bi bi-clipboard"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Copyright & Links -->
+    <div class="text-muted small mb-2">
+      &copy; 2024 Takashi Sasaki. All rights reserved.
+    </div>
+    <div class="small d-flex justify-content-center gap-3">
+      <a href="https://x.com/TakashiSasaki" target="_blank" class="text-decoration-none text-secondary">
+        <i class="bi bi-twitter me-1"></i>x.com
+      </a>
+      <span class="text-muted">|</span>
+      <a href="https://github.com/TakashiSasaki/gas.moukaeritai.work" target="_blank" class="text-decoration-none text-secondary">
+        <i class="bi bi-github me-1"></i>GitHub
+      </a>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * URLをクリップボードにコピーする処理
+     * iframe内での動作を考慮し、document.execCommand('copy')を使用
+     */
+    function copyAppUrl(btn) {
+      const copyText = document.getElementById("app-url-input");
+      
+      // テキストを選択
+      copyText.select();
+      copyText.setSelectionRange(0, 99999); // For mobile devices
+      
+      try {
+        // コピー実行
+        const successful = document.execCommand('copy');
+        if (successful) {
+          // 成功時の視覚的フィードバック
+          const originalHtml = btn.innerHTML;
+          const originalClass = 'btn-outline-secondary';
+          const successClass = 'btn-success';
+          
+          btn.innerHTML = '<i class="bi bi-check-lg"></i>';
+          btn.classList.remove(originalClass);
+          btn.classList.add(successClass);
+          
+          // 2秒後に元に戻す
+          setTimeout(() => {
+            btn.innerHTML = originalHtml;
+            btn.classList.remove(successClass);
+            btn.classList.add(originalClass);
+          }, 2000);
+        } else {
+          // 失敗時
+          console.warn('Copy command returned false');
+          alert('コピーに失敗しました。手動でコピーしてください。');
+        }
+      } catch (err) {
+        console.error('Copy failed:', err);
+        alert('このブラウザでは自動コピーがサポートされていません。');
+      }
+    }
+  </script>
+</footer>
