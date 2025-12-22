@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docs to Blogger</title>
+    <style>
+      /* CSSは以前と同じ */
+      body { font-family: sans-serif; background: #f5f5f5; display: flex; justify-content: center; padding-top: 50px; }
+      .container { background: white; padding: 2rem; border-radius: 8px; width: 100%; max-width: 500px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+      input, select, button { width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
+      button { background: #ff9800; color: white; border: none; cursor: pointer; }
+      button:disabled { background: #ccc; }
+      .error { color: red; background: #ffe6e6; padding: 10px; }
+      .auth-btn { background: #4285f4; margin-top: 10px; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Docs to Blogger</h1>
+      
+      <div id="authArea" style="display:none; text-align:center; margin-bottom:20px;">
+        <p>Bloggerへのアクセス許可が必要です。</p>
+        <a id="authLink" href="#" target="_blank">
+          <button class="auth-btn">Google 認証を行う</button>
+        </a>
+        <p><small>認証完了後に再度リロードしてください。</small></p>
+      </div>
+
+      <div id="mainForm">
+        <label>Target Blog</label>
+        <select id="blogSelect" disabled><option>Loading...</option></select>
+
+        <label>Google Doc URL</label>
+        <input type="text" id="docUrl" placeholder="https://docs.google.com/..." required>
+
+        <button id="submitBtn" onclick="submitForm()" disabled>Post to Blogger (Draft)</button>
+        <div id="status"></div>
+      </div>
+    </div>
+
+    <script>
+      window.onload = loadBlogList;
+
+      function loadBlogList() {
+        const select = document.getElementById('blogSelect');
+        
+        google.script.run
+          .withSuccessHandler(function(result) {
+            // 認証が必要な場合
+            if (result.authRequired) {
+              document.getElementById('mainForm').style.opacity = '0.5';
+              document.getElementById('authArea').style.display = 'block';
+              document.getElementById('authLink').href = result.authUrl;
+              select.innerHTML = '<option>認証待ち...</option>';
+              return;
+            }
+
+            // 認証済みの場合
+            document.getElementById('authArea').style.display = 'none';
+            document.getElementById('mainForm').style.opacity = '1';
+            
+            select.innerHTML = '';
+            if (result.blogs.length === 0) {
+               select.add(new Option("No blogs found", ""));
+            } else {
+               result.blogs.forEach(b => select.add(new Option(b.name, b.id)));
+               select.disabled = false;
+               document.getElementById('submitBtn').disabled = false;
+               loadPreferredBlog();
+            }
+          })
+          .withFailureHandler(e => alert('Error: ' + e.message))
+          .getBlogList();
+      }
+
+      function loadPreferredBlog() {
+        google.script.run.withSuccessHandler(id => {
+          if(id) document.getElementById('blogSelect').value = id;
+        }).getPreferredBlogId();
+      }
+
+      function submitForm() {
+        const blogId = document.getElementById('blogSelect').value;
+        const docUrl = document.getElementById('docUrl').value;
+        const btn = document.getElementById('submitBtn');
+        
+        if(!blogId || !docUrl) return;
+
+        btn.disabled = true;
+        btn.innerText = "Posting...";
+
+        google.script.run
+          .withSuccessHandler(res => {
+            btn.disabled = false;
+            btn.innerText = "Post to Blogger (Draft)";
+            const status = document.getElementById('status');
+            if(res.success) {
+              status.innerHTML = `<p style="color:green">成功! <a href="${res.url}" target="_blank">記事を見る</a></p>`;
+            } else {
+              status.innerHTML = `<p class="error">${res.message}</p>`;
+            }
+          })
+          .processDocument(docUrl, blogId);
+      }
+    </script>
+  </body>
+</html>

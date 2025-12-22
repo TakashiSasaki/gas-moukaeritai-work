@@ -1,0 +1,23 @@
+{
+  "timeZone": "Asia/Tokyo",
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "dependencies": {
+    "enabledAdvancedServices": [
+      {
+        "userSymbol": "Drive",
+        "serviceId": "drive",
+        "version": "v3"
+      }
+    ]
+  },
+  "webapp": {
+    "executeAs": "USER_DEPLOYING",
+    "access": "MYSELF"
+  },
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/script.external_request",
+    "https://www.googleapis.com/auth/script.store_user_properties",
+    "https://www.googleapis.com/auth/documents"
+  ]
+}

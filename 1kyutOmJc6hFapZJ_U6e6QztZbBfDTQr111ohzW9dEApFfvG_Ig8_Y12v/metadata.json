@@ -1,0 +1,19 @@
+{
+  "name": "Docs to Blogger Publisher",
+  "id": "1kyutOmJc6hFapZJ_U6e6QztZbBfDTQr111ohzW9dEApFfvG_Ig8_Y12v",
+  "url": "https://script.google.com/d/1kyutOmJc6hFapZJ_U6e6QztZbBfDTQr111ohzW9dEApFfvG_Ig8_Y12v/edit?usp=drivesdk",
+  "lastUpdated": "2025-12-22T01:33:24.416Z",
+  "application.json": null,
+  "deployments.json": [
+    {
+      "id": "AKfycbz5Bzx1OfIyA_OwodjOky8yLl-CWVfp6tc3Ain_Vr0",
+      "target": "HEAD",
+      "description": ""
+    },
+    {
+      "id": "AKfycbxx25j5cJZlaPNnf6js9-MchBhZ3yxTbdflxI57vnl3oggYPaT--utvJbDFrU3RxvdW",
+      "target": "10",
+      "description": "公開用"
+    }
+  ]
+}

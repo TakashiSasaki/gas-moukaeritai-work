@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docs to Blogger</title>
+    <style>
+      body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5; display: flex; justify-content: center; padding-top: 50px; margin: 0; }
+      .container { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 500px; }
+      h1 { margin-top: 0; color: #333; font-size: 1.5rem; text-align: center; }
+      .form-group { margin-bottom: 1.5rem; }
+      label { display: block; margin-bottom: 0.5rem; color: #666; font-weight: bold; }
+      input[type="text"], select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 16px; background: #fff; }
+      button { width: 100%; padding: 12px; background-color: #ff9800; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; transition: background-color 0.3s; }
+      button:hover { background-color: #e68900; }
+      button:disabled { background-color: #ccc; cursor: not-allowed; }
+      #status { margin-top: 20px; padding: 15px; border-radius: 4px; display: none; word-break: break-all; }
+      .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+      .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+      .loader { border: 4px solid #f3f3f3; border-top: 4px solid #ff9800; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; margin: 0 auto; display: none; }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      .loading-text { font-size: 0.9rem; color: #888; text-align: center; margin-bottom: 5px; display: none; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Docs to Blogger</h1>
+      
+      <div class="form-group">
+        <label for="blogSelect">Target Blog</label>
+        <div id="blogLoading" class="loading-text">Loading blogs...</div>
+        <select id="blogSelect" disabled>
+          <option value="">Fetching blog list...</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="docUrl">Google Doc URL or ID</label>
+        <input type="text" id="docUrl" placeholder="https://docs.google.com/document/d/..." required>
+      </div>
+
+      <button id="submitBtn" onclick="submitForm()" disabled>
+        <span id="btnText">Post to Blogger (Draft)</span>
+        <div id="loader" class="loader"></div>
+      </button>
+
+      <div id="status"></div>
+    </div>
+
+    <script>
+      // ページ読み込み完了時にブログ一覧を取得
+      window.onload = function() {
+        loadBlogList();
+      };
+
+      function loadBlogList() {
+        const select = document.getElementById('blogSelect');
+        const loading = document.getElementById('blogLoading');
+        loading.style.display = 'block';
+
+        google.script.run
+          .withSuccessHandler(function(blogs) {
+            select.innerHTML = ''; // 既存オプションをクリア
+            loading.style.display = 'none';
+            
+            if (blogs.length === 0) {
+              const option = document.createElement('option');
+              option.text = "No blogs found";
+              select.add(option);
+              return;
+            }
+
+            // ブログ一覧をプルダウンに追加
+            blogs.forEach(function(blog) {
+              const option = document.createElement('option');
+              option.value = blog.id;
+              option.text = blog.name + " (" + blog.url + ")";
+              select.add(option);
+            });
+            select.disabled = false;
+            
+            // 以前選択したブログIDがあれば自動選択
+            loadPreferredBlog();
+          })
+          .withFailureHandler(function(err) {
+            loading.innerText = 'Error loading blogs: ' + err.message;
+            loading.style.color = 'red';
+          })
+          .getBlogList();
+      }
+
+      function loadPreferredBlog() {
+        google.script.run
+          .withSuccessHandler(function(savedId) {
+            const select = document.getElementById('blogSelect');
+            const btn = document.getElementById('submitBtn');
+            
+            if (savedId) {
+              select.value = savedId;
+            }
+            // リスト読み込み完了後にボタンを有効化
+            btn.disabled = false;
+          })
+          .getPreferredBlogId();
+      }
+
+      function submitForm() {
+        const blogSelect = document.getElementById('blogSelect');
+        const docInput = document.getElementById('docUrl');
+        const blogId = blogSelect.value;
+        const docUrl = docInput.value.trim();
+        
+        const btn = document.getElementById('submitBtn');
+        const btnText = document.getElementById('btnText');
+        const loader = document.getElementById('loader');
+
+        if (!blogId) {
+          showStatus('ブログを選択してください', false);
+          return;
+        }
+        if (!docUrl) {
+          showStatus('ドキュメントURLを入力してください', false);
+          return;
+        }
+
+        // UIロック
+        btn.disabled = true;
+        blogSelect.disabled = true;
+        btnText.style.display = 'none';
+        loader.style.display = 'block';
+        showStatus('', true); // ステータスクリア
+
+        // 投稿処理実行 (ブログIDも渡す)
+        google.script.run
+          .withSuccessHandler(function(response) {
+            resetUI();
+            if (response.success) {
+              showStatus(`成功しました！<br><a href="${response.url}" target="_blank">記事を確認する (下書き)</a>`, true);
+              docInput.value = ''; 
+            } else {
+              showStatus('エラー: ' + response.message, false);
+            }
+          })
+          .withFailureHandler(function(error) {
+            resetUI();
+            showStatus('システムエラー: ' + error.message, false);
+          })
+          .processDocument(docUrl, blogId);
+      }
+
+      function resetUI() {
+        const btn = document.getElementById('submitBtn');
+        const blogSelect = document.getElementById('blogSelect');
+        const btnText = document.getElementById('btnText');
+        const loader = document.getElementById('loader');
+        
+        btn.disabled = false;
+        blogSelect.disabled = false;
+        btnText.style.display = 'inline';
+        loader.style.display = 'none';
+      }
+
+      function showStatus(msg, isSuccess) {
+        const div = document.getElementById('status');
+        if (!msg) {
+            div.style.display = 'none';
+            return;
+        }
+        div.innerHTML = msg;
+        div.className = isSuccess ? 'success' : 'error';
+        div.style.display = 'block';
+      }
+    </script>
+  </body>
+</html>
