@@ -45,10 +45,12 @@ jobs:
           printf '%s' "$CLASPRC_JSON" > ~/.clasprc.json
 
       - name: Capture current Apps Script signals
+        env:
+          SCRIPT_ID: ${{ inputs.script_id }}
         run: |
           mkdir -p "$RUNNER_TEMP/current"
           python automation/stage-2-inspection/diagnose-change-signals.py snapshot \
-            --script-id '${{ inputs.script_id }}' \
+            --script-id "$SCRIPT_ID" \
             --output "$RUNNER_TEMP/current/snapshot.json"
 
       - name: Upload current diagnostic snapshot
