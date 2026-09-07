@@ -11,7 +11,7 @@ import argparse
 import importlib.util
 import json
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from types import ModuleType
 from typing import Any
 
@@ -116,7 +116,13 @@ def _canonical_files_reusable(metadata: dict[str, Any], script_id: str) -> bool:
     ):
         return False
     for item in files:
-        if not isinstance(item.get("name"), str) or not item["name"]:
+        name = item.get("name")
+        if not isinstance(name, str) or not name or "\\" in name:
+            return False
+        relative = PurePosixPath(name)
+        if relative.is_absolute() or not relative.parts or any(
+            part in {"", ".", ".."} for part in relative.parts
+        ):
             return False
         if item.get("type") not in {"SERVER_JS", "HTML", "JSON"}:
             return False
