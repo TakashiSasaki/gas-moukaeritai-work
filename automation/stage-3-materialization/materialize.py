@@ -110,10 +110,19 @@ def _validate_object_list(value: Any, label: str, script_id: str) -> list[dict[s
     return value
 
 
-def _observation_states(observation: dict[str, Any], script_id: str) -> dict[str, str]:
-    """Return explicit family freshness, accepting pre-marker plans as fully observed."""
+def _observation_states(
+    observation: dict[str, Any],
+    script_id: str,
+    *,
+    require_explicit: bool = False,
+) -> dict[str, str]:
+    """Return family freshness, requiring explicit state for schema-v2 plans."""
     raw = observation.get("observationState")
     if raw is None:
+        if require_explicit:
+            raise MaterializationPlanError(
+                f"{script_id}: schema-v2 observation must declare observationState"
+            )
         return {family: "observed" for family in _OBSERVATION_FAMILIES}
     if not isinstance(raw, dict):
         raise MaterializationPlanError(
@@ -319,7 +328,12 @@ def _expected_materialization_required(
     return checkpoint != observed_update_time
 
 
-def _validate_observation(item: dict[str, Any], script_id: str) -> dict[str, Any] | None:
+def _validate_observation(
+    item: dict[str, Any],
+    script_id: str,
+    *,
+    require_explicit_state: bool = False,
+) -> dict[str, Any] | None:
     lifecycle = item.get("lifecycle")
     required = item["materialization"]["required"]
     observation = item.get("observation")
@@ -351,7 +365,11 @@ def _validate_observation(item: dict[str, Any], script_id: str) -> dict[str, Any
             f"{script_id}: observation Apps Script project belongs to {observed_script_id!r}"
         )
 
-    states = _observation_states(observation, script_id)
+    states = _observation_states(
+        observation,
+        script_id,
+        require_explicit=require_explicit_state,
+    )
     family_values: dict[str, list[dict[str, Any]]] = {}
     for family in _OBSERVATION_FAMILIES:
         if states[family] == "observed":
@@ -436,8 +454,9 @@ def _validate_canonical_project(project_dir: Path, base: Path, script_id: str) -
 
 
 def _plan_projects(plan: dict[str, Any], base: Path) -> list[dict[str, Any]]:
-    if plan.get("schemaVersion") != 1:
-        raise MaterializationPlanError("Stage 2 plan schemaVersion must be 1")
+    schema_version = plan.get("schemaVersion")
+    if schema_version not in {1, 2}:
+        raise MaterializationPlanError("Stage 2 plan schemaVersion must be 1 or 2")
     projects = plan.get("projects")
     if not isinstance(projects, list):
         raise MaterializationPlanError("Stage 2 plan projects must be a list")
@@ -505,7 +524,11 @@ def _plan_projects(plan: dict[str, Any], base: Path) -> list[dict[str, Any]]:
                 f"current repository checkpoint is {current_checkpoint!r}"
             )
 
-        observation = _validate_observation(item, script_id)
+        observation = _validate_observation(
+            item,
+            script_id,
+            require_explicit_state=schema_version == 2,
+        )
         if planned_lifecycle != "absent":
             planned_observed = _optional_timestamp(
                 materialization.get("observedAppsScriptUpdateTime"),
