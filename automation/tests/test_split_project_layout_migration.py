@@ -199,6 +199,66 @@ class SplitProjectLayoutMigrationTests(unittest.TestCase):
         finally:
             temporary.cleanup()
 
+    def test_layout_migration_rejects_casefolded_repository_destination_conflict(self) -> None:
+        temporary, root = self.make_root()
+        try:
+            project = self.make_legacy_project(root)
+            (project / "Logo.png").write_bytes(b"root")
+            repository = project / "repository"
+            repository.mkdir()
+            (repository / "logo.png").write_bytes(b"existing")
+            with self.assertRaisesRegex(
+                layout_migration.LayoutMigrationError,
+                "case-insensitive destination collision",
+            ):
+                layout_migration.plan_project(project)
+        finally:
+            temporary.cleanup()
+
+    def test_layout_migration_rejects_casefolded_gas_destination_conflict(self) -> None:
+        temporary, root = self.make_root()
+        try:
+            project = self.make_legacy_project(root)
+            gas = project / "gas"
+            gas.mkdir()
+            (gas / "code.js").write_text("existing\n", encoding="utf-8")
+            with self.assertRaisesRegex(
+                layout_migration.LayoutMigrationError,
+                "case-insensitive destination collision",
+            ):
+                layout_migration.plan_project(project)
+        finally:
+            temporary.cleanup()
+
+    def test_layout_migration_rejects_casefolded_metadata_destination_conflict(self) -> None:
+        temporary, root = self.make_root()
+        try:
+            project = self.make_legacy_project(root)
+            repository = project / "repository"
+            repository.mkdir()
+            (repository / "Metadata.json").write_text("{}\n", encoding="utf-8")
+            with self.assertRaisesRegex(
+                layout_migration.LayoutMigrationError,
+                "case-insensitive destination collision",
+            ):
+                layout_migration.plan_project(project)
+        finally:
+            temporary.cleanup()
+
+    @unittest.skipIf(os.name == "nt", "case-only sibling names cannot be created reliably")
+    def test_layout_migration_rejects_casefolded_planned_source_collision(self) -> None:
+        temporary, root = self.make_root()
+        try:
+            project = self.make_legacy_project(root)
+            (project / "code.js").write_text("second\n", encoding="utf-8")
+            with self.assertRaisesRegex(
+                layout_migration.LayoutMigrationError,
+                "migration would create a case-insensitive gas/ collision",
+            ):
+                layout_migration.plan_project(project)
+        finally:
+            temporary.cleanup()
+
     def test_current_repository_is_fully_migrated_and_converged(self) -> None:
         # Post-cutover safety gate: a read-only migration pass over the tracked
         # repository must find no remaining flat-layout or partially migrated
