@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -51,6 +52,16 @@ class ProjectRegistryTests(unittest.TestCase):
             ["a", "b"],
         )
 
+    @unittest.skipIf(os.name == "nt", "symlink creation may require Windows developer privileges")
+    def test_iter_project_directories_rejects_symlink_entry(self) -> None:
+        target = self.root / "outside-project"
+        target.mkdir()
+        (self.root / "projects" / "linked-project").symlink_to(
+            target, target_is_directory=True
+        )
+        with self.assertRaisesRegex(project_registry.ProjectRegistryError, "must not be a symlink"):
+            project_registry.iter_project_directories(self.root)
+
     def test_project_path_rejects_path_traversal(self) -> None:
         for unsafe in ("", ".", "..", "../outside", "nested/id", "nested\\id"):
             with self.subTest(unsafe=unsafe):
@@ -60,6 +71,17 @@ class ProjectRegistryTests(unittest.TestCase):
     def test_get_script_id_reads_clasp_configuration(self) -> None:
         project_dir = self.create_project("script-123")
         self.assertEqual(project_registry.get_script_id(project_dir), "script-123")
+
+    @unittest.skipIf(os.name == "nt", "symlink creation may require Windows developer privileges")
+    def test_load_clasp_rejects_symlinked_leaf(self) -> None:
+        project_dir = self.create_project("script-123")
+        clasp_path = project_dir / ".clasp.json"
+        target = self.root / "outside-clasp.json"
+        target.write_text(json.dumps({"scriptId": "script-123"}), encoding="utf-8")
+        clasp_path.unlink()
+        clasp_path.symlink_to(target)
+        with self.assertRaisesRegex(project_registry.ProjectRegistryError, "must not be a symlink"):
+            project_registry.load_clasp(project_dir)
 
     def test_layout_paths_are_project_local(self) -> None:
         project_dir = self.create_project("script-123")
@@ -103,6 +125,33 @@ class ProjectRegistryTests(unittest.TestCase):
             project_dir / "repository" / "metadata.json",
         )
         self.assertEqual(project_registry.load_metadata(project_dir), metadata)
+
+    @unittest.skipIf(os.name == "nt", "symlink creation may require Windows developer privileges")
+    def test_load_metadata_rejects_symlinked_split_leaf(self) -> None:
+        project_dir = self.create_project(
+            "script-123",
+            {"driveApi": {"name": "Split"}},
+            split_metadata=True,
+        )
+        metadata_path = project_dir / "repository" / "metadata.json"
+        target = self.root / "outside-metadata.json"
+        target.write_text(json.dumps({"outside": True}), encoding="utf-8")
+        metadata_path.unlink()
+        metadata_path.symlink_to(target)
+        with self.assertRaisesRegex(project_registry.ProjectRegistryError, "must not be a symlink"):
+            project_registry.load_metadata(project_dir)
+
+    @unittest.skipIf(os.name == "nt", "symlink creation may require Windows developer privileges")
+    def test_metadata_rejects_symlinked_repository_directory(self) -> None:
+        project_dir = self.create_project("script-123")
+        target = self.root / "outside-repository"
+        target.mkdir()
+        (target / "metadata.json").write_text(
+            json.dumps({"outside": True}), encoding="utf-8"
+        )
+        (project_dir / "repository").symlink_to(target, target_is_directory=True)
+        with self.assertRaisesRegex(project_registry.ProjectRegistryError, "must not be a symlink"):
+            project_registry.load_metadata(project_dir)
 
     def test_metadata_rejects_legacy_and_split_files_together(self) -> None:
         project_dir = self.create_project("script-123", {"layout": "legacy"})
