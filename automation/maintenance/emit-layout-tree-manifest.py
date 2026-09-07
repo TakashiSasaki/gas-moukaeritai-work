@@ -7,7 +7,8 @@ helper then compares the working `projects/` tree with `HEAD`, reuses existing
 Git blob SHAs for byte-identical moved files, and embeds UTF-8 content only for
 newly modified text files such as `.clasp.json` and consolidated metadata.
 
-The remote repository is never mutated by this script.
+The remote repository is never mutated by this script. Canonical project-tree
+symlinks are rejected rather than dereferenced into the emitted manifest.
 """
 
 from __future__ import annotations
@@ -48,13 +49,44 @@ def head_entries() -> dict[str, tuple[str, str, str]]:
     for line in output.splitlines():
         metadata, path = line.split("\t", 1)
         mode, object_type, sha = metadata.split(" ", 2)
+        if mode == "120000":
+            raise RuntimeError(f"canonical project tree contains a symlink in HEAD: {path}")
         if object_type != "blob":
             continue
         entries[path] = (mode, object_type, sha)
     return entries
 
 
+def _working_files(projects: Path) -> tuple[Path, ...]:
+    """Enumerate regular files lexically without following project-tree symlinks."""
+    if projects.is_symlink():
+        raise RuntimeError(f"canonical projects directory must not be a symlink: {projects}")
+    if not projects.is_dir():
+        raise RuntimeError(f"canonical projects directory is missing: {projects}")
+
+    files: list[Path] = []
+    pending = [projects]
+    while pending:
+        directory = pending.pop()
+        for path in sorted(directory.iterdir(), key=lambda item: item.name):
+            if path.is_symlink():
+                raise RuntimeError(
+                    f"canonical project tree contains a symlink: "
+                    f"{path.relative_to(REPO_ROOT).as_posix()}"
+                )
+            if path.is_dir():
+                pending.append(path)
+            elif path.is_file():
+                files.append(path)
+    return tuple(sorted(files))
+
+
 def _blob_sha(path: Path) -> str:
+    if path.is_symlink():
+        raise RuntimeError(
+            f"refusing to hash symlinked canonical project file: "
+            f"{path.relative_to(REPO_ROOT).as_posix()}"
+        )
     # `git hash-object` without `-w` computes the canonical blob id but does
     # not write anything into the local object database.
     return _git("hash-object", str(path.relative_to(REPO_ROOT))).strip()
@@ -69,7 +101,7 @@ def working_entries(
 
     entries: dict[str, tuple[str, str]] = {}
     projects = REPO_ROOT / "projects"
-    for path in sorted(candidate for candidate in projects.rglob("*") if candidate.is_file()):
+    for path in _working_files(projects):
         relative = path.relative_to(REPO_ROOT).as_posix()
         sha = _blob_sha(path)
         if relative in originals:
@@ -100,6 +132,8 @@ def build_elements() -> list[dict[str, Any]]:
             element["sha"] = sha
         else:
             source = REPO_ROOT / path
+            if source.is_symlink():
+                raise RuntimeError(f"refusing to read symlinked canonical project file: {path}")
             try:
                 element["content"] = source.read_text(encoding="utf-8")
             except UnicodeError as exc:
