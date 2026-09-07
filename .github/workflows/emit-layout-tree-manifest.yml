@@ -19,6 +19,6 @@ jobs:
       - name: Checkout pull request
         uses: actions/checkout@v4
       - name: Apply layout migration in disposable checkout
-        run: python automation/maintenance/migrate-project-layout.py --apply
+        run: python automation/maintenance/migrate-project-layout.py --apply >/dev/null
       - name: Emit Git tree manifest chunk
         run: python automation/maintenance/emit-layout-tree-manifest.py --chunk "${{ matrix.chunk }}" --chunks 8
