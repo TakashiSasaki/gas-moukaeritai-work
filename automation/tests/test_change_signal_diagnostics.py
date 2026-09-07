@@ -6,6 +6,7 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DIAGNOSTIC_PATH = REPO_ROOT / "automation" / "stage-2-inspection" / "diagnose-change-signals.py"
@@ -29,20 +30,29 @@ class FakeApi:
     def __init__(
         self,
         *,
-        update_time: str = "2026-09-07T00:00:00Z",
+        update_time: Any = "2026-09-07T00:00:00Z",
+        project_update_times: list[Any] | None = None,
         files: list[dict] | None = None,
         deployments: list[dict] | None = None,
         versions: list[dict] | None = None,
     ) -> None:
         self.update_time = update_time
+        self.project_update_times = list(project_update_times) if project_update_times is not None else None
         self.files = files if files is not None else [{"name": "Code", "type": "SERVER_JS", "updateTime": update_time}]
         self.deployments = deployments if deployments is not None else []
         self.versions = versions if versions is not None else []
         self.calls: list[tuple[str, str, str]] = []
+        self.project_calls = 0
 
     def get_project(self, script_id: str, access_token: str) -> dict:
         self.calls.append(("project", script_id, access_token))
-        return {"scriptId": script_id, "title": "Diagnostic", "updateTime": self.update_time}
+        if self.project_update_times is None:
+            update_time = self.update_time
+        else:
+            index = min(self.project_calls, len(self.project_update_times) - 1)
+            update_time = self.project_update_times[index]
+        self.project_calls += 1
+        return {"scriptId": script_id, "title": "Diagnostic", "updateTime": update_time}
 
     def get_project_files_metadata(self, script_id: str, access_token: str) -> list[dict]:
         self.calls.append(("files", script_id, access_token))
@@ -62,7 +72,7 @@ def _now() -> datetime:
 
 
 class ChangeSignalDiagnosticTests(unittest.TestCase):
-    def test_snapshot_observes_each_stage2_resource_family_once(self):
+    def test_snapshot_brackets_stage2_resource_families_with_project_reads(self):
         api = FakeApi(
             files=[
                 {"name": "Zed", "type": "HTML", "updateTime": "2"},
@@ -87,11 +97,15 @@ class ChangeSignalDiagnosticTests(unittest.TestCase):
 
         self.assertEqual(
             [call[0] for call in api.calls],
-            ["project", "files", "deployments", "versions"],
+            ["project", "files", "deployments", "versions", "project"],
         )
         self.assertTrue(all(call[1] == "script-123" for call in api.calls))
         self.assertTrue(all(call[2] == "fake-access-token" for call in api.calls))
+        self.assertEqual(snapshot["schemaVersion"], 2)
         self.assertEqual(snapshot["observedAt"], "2026-09-07T03:00:00Z")
+        self.assertEqual(snapshot["captureStatus"], "stable")
+        self.assertTrue(snapshot["captureConclusive"])
+        self.assertEqual(snapshot["projectUpdateTime"], "2026-09-07T00:00:00Z")
         self.assertEqual([item["name"] for item in snapshot["observations"]["files"]], ["Alpha", "Zed"])
         self.assertEqual(
             [item["deploymentId"] for item in snapshot["observations"]["deployments"]],
@@ -100,6 +114,33 @@ class ChangeSignalDiagnosticTests(unittest.TestCase):
         self.assertEqual(
             [item["versionNumber"] for item in snapshot["observations"]["versions"]],
             [1, 2],
+        )
+
+    def test_project_change_during_capture_is_inconclusive(self):
+        snapshot = diagnostic.capture_snapshot(
+            "script-123",
+            "token",
+            api=FakeApi(
+                project_update_times=[
+                    "2026-09-07T00:00:00Z",
+                    "2026-09-07T00:01:00Z",
+                ]
+            ),
+            now=_now,
+        )
+
+        self.assertEqual(
+            snapshot["captureStatus"],
+            "project-update-time-changed-during-capture",
+        )
+        self.assertFalse(snapshot["captureConclusive"])
+        self.assertIsNone(snapshot["projectUpdateTime"])
+        self.assertEqual(
+            snapshot["projectUpdateTimeBracket"],
+            {
+                "before": "2026-09-07T00:00:00Z",
+                "after": "2026-09-07T00:01:00Z",
+            },
         )
 
     def test_deployment_change_without_project_update_time_is_counterexample(self):
@@ -118,12 +159,15 @@ class ChangeSignalDiagnosticTests(unittest.TestCase):
 
         comparison = diagnostic.compare_snapshots(before, after)
 
+        self.assertTrue(comparison["conclusive"])
+        self.assertEqual(comparison["inconclusiveReasons"], [])
         self.assertFalse(comparison["projectUpdateTime"]["changed"])
         self.assertTrue(comparison["sectionsChanged"]["deployments"])
         self.assertEqual(
             comparison["downstreamChangedWithoutProjectUpdateTime"],
             ["deployments"],
         )
+        self.assertEqual(comparison["counterexampleEvaluation"], "counterexample-observed")
         self.assertFalse(comparison["projectUpdateTimeSufficientForObservedTransition"])
 
     def test_version_change_without_project_update_time_is_counterexample(self):
@@ -147,13 +191,14 @@ class ChangeSignalDiagnosticTests(unittest.TestCase):
 
         comparison = diagnostic.compare_snapshots(before, after)
 
+        self.assertTrue(comparison["conclusive"])
         self.assertEqual(
             comparison["downstreamChangedWithoutProjectUpdateTime"],
             ["versions"],
         )
         self.assertFalse(comparison["projectUpdateTimeSufficientForObservedTransition"])
 
-    def test_project_update_time_change_avoids_false_counterexample(self):
+    def test_project_update_time_change_between_stable_snapshots_is_conclusive(self):
         before = diagnostic.capture_snapshot(
             "script-123",
             "token",
@@ -169,9 +214,72 @@ class ChangeSignalDiagnosticTests(unittest.TestCase):
 
         comparison = diagnostic.compare_snapshots(before, after)
 
+        self.assertTrue(comparison["conclusive"])
         self.assertTrue(comparison["projectUpdateTime"]["changed"])
         self.assertEqual(comparison["downstreamChangedWithoutProjectUpdateTime"], [])
+        self.assertEqual(comparison["counterexampleEvaluation"], "no-counterexample-observed")
         self.assertTrue(comparison["projectUpdateTimeSufficientForObservedTransition"])
+
+    def test_unstable_capture_cannot_produce_counterexample(self):
+        before = diagnostic.capture_snapshot(
+            "script-123",
+            "token",
+            api=FakeApi(deployments=[{"deploymentId": "d1", "updateTime": "1"}]),
+            now=_now,
+        )
+        after = diagnostic.capture_snapshot(
+            "script-123",
+            "token",
+            api=FakeApi(
+                project_update_times=[
+                    "2026-09-07T00:00:00Z",
+                    "2026-09-07T00:01:00Z",
+                ],
+                deployments=[{"deploymentId": "d1", "updateTime": "2"}],
+            ),
+            now=_now,
+        )
+
+        comparison = diagnostic.compare_snapshots(before, after)
+
+        self.assertFalse(comparison["conclusive"])
+        self.assertIn(
+            "after-project-update-time-changed-during-capture",
+            comparison["inconclusiveReasons"],
+        )
+        self.assertIsNone(comparison["projectUpdateTime"]["changed"])
+        self.assertEqual(comparison["downstreamChangedWithoutProjectUpdateTime"], [])
+        self.assertEqual(comparison["counterexampleEvaluation"], "inconclusive")
+        self.assertIsNone(comparison["projectUpdateTimeSufficientForObservedTransition"])
+
+    def test_missing_or_invalid_project_update_time_is_inconclusive(self):
+        for unavailable in (None, "", "not-a-timestamp", 123):
+            with self.subTest(unavailable=unavailable):
+                before = diagnostic.capture_snapshot(
+                    "script-123",
+                    "token",
+                    api=FakeApi(update_time=unavailable, deployments=[]),
+                    now=_now,
+                )
+                after = diagnostic.capture_snapshot(
+                    "script-123",
+                    "token",
+                    api=FakeApi(
+                        update_time=unavailable,
+                        deployments=[{"deploymentId": "d1", "updateTime": "2"}],
+                    ),
+                    now=_now,
+                )
+
+                comparison = diagnostic.compare_snapshots(before, after)
+
+                self.assertEqual(before["captureStatus"], "project-update-time-unavailable")
+                self.assertEqual(after["captureStatus"], "project-update-time-unavailable")
+                self.assertFalse(comparison["conclusive"])
+                self.assertIsNone(comparison["projectUpdateTime"]["changed"])
+                self.assertEqual(comparison["downstreamChangedWithoutProjectUpdateTime"], [])
+                self.assertEqual(comparison["counterexampleEvaluation"], "inconclusive")
+                self.assertIsNone(comparison["projectUpdateTimeSufficientForObservedTransition"])
 
     def test_comparison_rejects_different_script_ids(self):
         first = diagnostic.capture_snapshot("script-a", "token", api=FakeApi(), now=_now)
