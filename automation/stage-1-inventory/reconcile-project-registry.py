@@ -26,6 +26,7 @@ from automation.shared.project_registry import (
     load_metadata,
     metadata_exists,
     project_path,
+    project_repository_path,
     write_metadata,
 )
 
@@ -65,7 +66,11 @@ def _write_clasp(directory: Path, script_id: str) -> None:
         return
     temporary = clasp_path.with_name(clasp_path.name + ".tmp")
     temporary.write_text(
-        json.dumps({"scriptId": script_id}, ensure_ascii=False, indent=2),
+        json.dumps(
+            {"scriptId": script_id, "rootDir": "gas"},
+            ensure_ascii=False,
+            indent=2,
+        ),
         encoding="utf-8",
     )
     os.replace(temporary, clasp_path)
@@ -110,6 +115,10 @@ def reconcile(snapshot: Path, root: Path | None = None) -> int:
         _set_drive_lifecycle(metadata, "present")
 
         if is_new_metadata:
+            # New registry entries use the split layout immediately. `gas/`
+            # remains absent until the first source materialization because Git
+            # does not track empty directories.
+            project_repository_path(directory).mkdir(parents=True, exist_ok=True)
             _write_clasp(directory, script_id)
         write_metadata(directory, metadata)
         present_script_ids.add(script_id)
