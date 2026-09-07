@@ -100,7 +100,7 @@ def plan_item(
 
 def plan(item: dict) -> dict:
     return {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "materializationRequired": item["materialization"]["required"],
         "projects": [item],
     }
@@ -121,6 +121,7 @@ class PartialObservationSemanticsTests(unittest.TestCase):
             api = FakeInspectionApi()
             built = planner.build_plan(root, "token", api=api)
             observation = built["projects"][0]["observation"]
+            self.assertEqual(2, built["schemaVersion"])
             self.assertEqual(
                 {
                     "files": "observed",
@@ -192,6 +193,44 @@ class PartialObservationSemanticsTests(unittest.TestCase):
                 "same",
                 metadata["syncState"]["lastMaterializedAppsScriptUpdateTime"],
             )
+
+    def test_schema_v2_rejects_missing_observation_state(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = write_project(
+                root,
+                "script-1",
+                {
+                    "lifecycle": {"driveInventory": "present"},
+                    "syncState": {"lastMaterializedAppsScriptUpdateTime": "same"},
+                    "files": [{"name": "Canonical", "type": "SERVER_JS"}],
+                },
+            )
+            before = load_metadata(project)
+            observation = {
+                "appsScriptApi": {"scriptId": "script-1", "updateTime": "same"},
+                "files": [{"name": "Stale", "type": "SERVER_JS"}],
+                "deployments": [],
+                "versions": [],
+            }
+            with self.assertRaisesRegex(
+                stage3.MaterializationPlanError,
+                "schema-v2 observation must declare observationState",
+            ):
+                stage3.materialize_plan(
+                    plan(
+                        plan_item(
+                            "script-1",
+                            required=False,
+                            checkpoint="same",
+                            observed="same",
+                            observation=observation,
+                        )
+                    ),
+                    root,
+                    clasp=FakeClasp(),
+                )
+            self.assertEqual(before, load_metadata(project))
 
     def test_not_observed_family_must_not_carry_stale_payload(self):
         with tempfile.TemporaryDirectory() as temporary:
