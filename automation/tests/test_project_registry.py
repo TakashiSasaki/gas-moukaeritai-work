@@ -125,7 +125,12 @@ class ProjectRegistryTests(unittest.TestCase):
         metadata = {"driveApi": {"name": "日本語"}, "appsScriptApi": {"updateTime": "t"}}
         project_registry.write_metadata(project_dir, metadata)
         self.assertEqual(project_registry.load_metadata(project_dir), metadata)
-        self.assertTrue((project_dir / "metadata.json").read_text(encoding="utf-8").endswith("\n"))
+        self.assertTrue(
+            (project_dir / "repository" / "metadata.json")
+            .read_text(encoding="utf-8")
+            .endswith("\n")
+        )
+        self.assertFalse((project_dir / "metadata.json").exists())
 
     def test_write_metadata_preserves_split_layout(self) -> None:
         project_dir = self.create_project(
