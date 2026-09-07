@@ -13,9 +13,17 @@ from pathlib import Path
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 PROJECTS_DIR = REPOSITORY_ROOT / "projects"
 DOCS_PROJECTS = REPOSITORY_ROOT / "docs" / "projects.json"
+PROJECT_ROOT_ALLOWED = {".clasp.json", "README.md", "gas", "repository"}
 
 if str(REPOSITORY_ROOT) not in sys.path:
     sys.path.insert(0, str(REPOSITORY_ROOT))
+
+from automation.shared.project_registry import (
+    legacy_metadata_path,
+    project_repository_path,
+    project_source_path,
+    split_metadata_path,
+)
 
 
 class Validation:
@@ -96,14 +104,36 @@ def validate_projects(validation: Validation) -> tuple[set[str], set[str]]:
         validation.error("projects/ contains no project directories")
 
     for project_dir in project_dirs:
+        relative_project = project_dir.relative_to(REPOSITORY_ROOT)
         clasp_path = project_dir / ".clasp.json"
-        metadata_path = project_dir / "metadata.json"
+        metadata_path = split_metadata_path(project_dir)
+        legacy_metadata = legacy_metadata_path(project_dir)
+        repository_dir = project_repository_path(project_dir)
+        source_dir = project_source_path(project_dir)
+
+        if project_dir.is_symlink():
+            validation.error(f"project directory must not be a symlink: {relative_project}")
+            continue
 
         if not clasp_path.is_file():
-            validation.error(f"missing .clasp.json: {project_dir.relative_to(REPOSITORY_ROOT)}")
+            validation.error(f"missing .clasp.json: {relative_project}")
             continue
+
+        if repository_dir.is_symlink() or not repository_dir.is_dir():
+            validation.error(f"missing/invalid repository/ directory: {relative_project}")
         if not metadata_path.is_file():
-            validation.error(f"missing metadata.json: {project_dir.relative_to(REPOSITORY_ROOT)}")
+            validation.error(f"missing repository/metadata.json: {relative_project}")
+        if legacy_metadata.exists():
+            validation.error(f"legacy root metadata.json remains after split-layout cutover: {relative_project}")
+        if source_dir.exists() and (source_dir.is_symlink() or not source_dir.is_dir()):
+            validation.error(f"invalid gas/ source directory: {relative_project}")
+
+        for entry in sorted(project_dir.iterdir(), key=lambda item: item.name):
+            if entry.name not in PROJECT_ROOT_ALLOWED:
+                validation.error(
+                    f"unexpected project-root entry after split-layout cutover: "
+                    f"{entry.relative_to(REPOSITORY_ROOT)}"
+                )
 
         clasp = load_json(clasp_path, validation)
         metadata = load_json(metadata_path, validation) if metadata_path.is_file() else None
@@ -116,6 +146,13 @@ def validate_projects(validation: Validation) -> tuple[set[str], set[str]]:
         if not isinstance(script_id, str) or not script_id:
             validation.error(f"missing/invalid scriptId: {clasp_path.relative_to(REPOSITORY_ROOT)}")
             continue
+
+        root_dir = clasp.get("rootDir")
+        if root_dir != "gas":
+            validation.error(
+                f".clasp.json rootDir must be 'gas' after split-layout cutover: "
+                f"{clasp_path.relative_to(REPOSITORY_ROOT)}"
+            )
 
         if script_id in project_ids:
             validation.error(f"duplicate scriptId in projects/: {script_id}")
