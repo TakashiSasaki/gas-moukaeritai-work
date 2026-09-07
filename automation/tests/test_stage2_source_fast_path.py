@@ -161,6 +161,26 @@ class Stage2SourceFastPathTests(unittest.TestCase):
             self.assertEqual("observed", item["observation"]["observationState"]["files"])
             self.assertEqual(["project", "files", "deployments", "versions"], api.calls)
 
+    def test_matching_checkpoint_with_unsafe_canonical_file_path_refreshes_metadata(self):
+        for name in ("../Escape", "/Absolute", "Folder\\File", "Folder/../Escape", "."):
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                write_project(
+                    root,
+                    canonical_metadata(files=[{"name": name, "type": "SERVER_JS"}]),
+                )
+                api = FakeInspectionApi(project_update_time="same")
+
+                item = planner.build_plan(root, "token", api=api)["projects"][0]
+
+                self.assertFalse(item["materialization"]["required"])
+                self.assertEqual(
+                    "observed", item["observation"]["observationState"]["files"]
+                )
+                self.assertEqual(
+                    ["project", "files", "deployments", "versions"], api.calls
+                )
+
     def test_absent_project_does_not_affect_active_observation_stats(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
