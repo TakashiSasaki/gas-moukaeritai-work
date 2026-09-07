@@ -17,6 +17,32 @@ SPEC.loader.exec_module(validator)
 
 @unittest.skipIf(os.name == "nt", "symlink creation may require Windows developer privileges")
 class SplitLayoutValidatorSymlinkTests(unittest.TestCase):
+    def test_top_level_project_enumeration_rejects_symlinks_before_is_dir_filter(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            projects = root / "projects"
+            projects.mkdir()
+            real_project = projects / "real"
+            real_project.mkdir()
+            outside_file = root / "outside.txt"
+            outside_file.write_text("outside", encoding="utf-8")
+            file_link = projects / "file-link"
+            file_link.symlink_to(outside_file)
+            broken_link = projects / "broken-link"
+            broken_link.symlink_to(root / "missing-target")
+
+            original_root = validator.REPOSITORY_ROOT
+            validator.REPOSITORY_ROOT = root
+            try:
+                validation = validator.Validation()
+                discovered = validator._project_directories(projects, validation)
+            finally:
+                validator.REPOSITORY_ROOT = original_root
+
+            self.assertEqual(discovered, (real_project,))
+            self.assertEqual(len(validation.errors), 2)
+            self.assertTrue(all("must not be a symlink" in error for error in validation.errors))
+
     def test_project_symlink_scan_rejects_nested_leaf_without_following_it(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
