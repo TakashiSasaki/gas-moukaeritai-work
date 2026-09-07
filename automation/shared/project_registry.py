@@ -1,7 +1,7 @@
 """Repository-access primitives for materialized Apps Script projects.
 
 This module deliberately contains no Drive API, Apps Script API, clasp, change
- detection, or documentation-generation business logic.
+detection, or documentation-generation business logic.
 """
 
 from __future__ import annotations
@@ -18,6 +18,8 @@ class ProjectRegistryError(ValueError):
 
 
 _DEFAULT_REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
+_SPLIT_REPOSITORY_DIRNAME = "repository"
+_METADATA_FILENAME = "metadata.json"
 
 
 def repository_root() -> Path:
@@ -54,6 +56,44 @@ def project_path(script_id: str, root: Path | str | None = None) -> Path:
     return projects_path(root) / _validate_script_id(script_id)
 
 
+def project_repository_path(project_dir: Path | str) -> Path:
+    """Return the split-layout repository-owned state directory."""
+    return Path(project_dir) / _SPLIT_REPOSITORY_DIRNAME
+
+
+def legacy_metadata_path(project_dir: Path | str) -> Path:
+    """Return the pre-split project-root metadata path."""
+    return Path(project_dir) / _METADATA_FILENAME
+
+
+def split_metadata_path(project_dir: Path | str) -> Path:
+    """Return the split-layout repository metadata path."""
+    return project_repository_path(project_dir) / _METADATA_FILENAME
+
+
+def metadata_path(project_dir: Path | str) -> Path:
+    """Resolve the single canonical metadata path during layout migration.
+
+    Split layout wins only when its metadata file exists. Legacy layout remains
+    the write target for projects that have not been migrated yet. Having both
+    files is ambiguous repository state and is rejected fail-closed.
+    """
+    legacy = legacy_metadata_path(project_dir)
+    split = split_metadata_path(project_dir)
+    if legacy.exists() and split.exists():
+        raise ProjectRegistryError(
+            f"ambiguous project metadata: both {legacy} and {split} exist"
+        )
+    if split.exists():
+        return split
+    return legacy
+
+
+def metadata_exists(project_dir: Path | str) -> bool:
+    """Return whether the project has metadata in exactly one supported layout."""
+    return metadata_path(project_dir).exists()
+
+
 def _load_json_object(path: Path, *, allow_missing: bool = False) -> dict[str, Any]:
     if allow_missing and not path.exists():
         return {}
@@ -81,30 +121,38 @@ def get_script_id(project_dir: Path | str) -> str:
 
 
 def load_metadata(project_dir: Path | str, *, allow_missing: bool = False) -> dict[str, Any]:
-    """Read a project's `metadata.json` object.
+    """Read a project's canonical metadata object.
 
+    During the split-layout migration this accepts either legacy
+    `metadata.json` or split `repository/metadata.json`, but never both.
     `allow_missing=True` is intended for Stage 1 while materializing a newly
-    discovered project. It does not suppress malformed existing metadata.
+    discovered project. It does not suppress malformed or ambiguous metadata.
     """
-    return _load_json_object(Path(project_dir) / "metadata.json", allow_missing=allow_missing)
+    return _load_json_object(metadata_path(project_dir), allow_missing=allow_missing)
 
 
 def write_metadata(project_dir: Path | str, metadata: dict[str, Any]) -> None:
-    """Atomically replace `metadata.json` with deterministic UTF-8 JSON."""
+    """Atomically replace canonical metadata with deterministic UTF-8 JSON.
+
+    Existing split projects keep writing `repository/metadata.json`; existing
+    legacy projects keep writing root `metadata.json`. A project with no
+    metadata yet remains legacy until the explicit layout migration changes the
+    repository-wide creation policy.
+    """
     directory = Path(project_dir)
     if not directory.is_dir():
         raise ProjectRegistryError(f"project directory does not exist: {directory}")
     if not isinstance(metadata, dict):
         raise ProjectRegistryError("metadata must be a JSON object")
 
-    destination = directory / "metadata.json"
+    destination = metadata_path(directory)
     serialized = json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     temporary_name: str | None = None
     try:
         with tempfile.NamedTemporaryFile(
             mode="w",
             encoding="utf-8",
-            dir=directory,
+            dir=destination.parent,
             prefix=".metadata.json.",
             suffix=".tmp",
             delete=False,
