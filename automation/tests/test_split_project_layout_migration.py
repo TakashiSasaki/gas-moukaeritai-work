@@ -149,12 +149,13 @@ class SplitProjectLayoutMigrationTests(unittest.TestCase):
         finally:
             temporary.cleanup()
 
-    def test_current_repository_flat_layout_is_fully_classifiable(self) -> None:
-        # Pre-bulk-migration safety gate: every tracked project must be
-        # classifiable using the GAS flat-file contract without path ambiguity.
+    def test_current_repository_is_fully_migrated_and_converged(self) -> None:
+        # Post-cutover safety gate: a read-only migration pass over the tracked
+        # repository must find no remaining flat-layout or partially migrated
+        # project. Any non-zero result means the committed tree regressed.
         with redirect_stdout(io.StringIO()):
             affected = layout_migration.run(REPO_ROOT, apply=False)
-        self.assertGreater(affected, 0)
+        self.assertEqual(affected, 0)
 
 
 if __name__ == "__main__":
