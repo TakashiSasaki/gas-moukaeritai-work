@@ -201,6 +201,24 @@ class AppsScriptApiRetryTests(unittest.TestCase):
 
         self.assertEqual([1.0], sleeps)
 
+    def test_unreasonable_numeric_retry_after_falls_back_safely(self):
+        url = f"{api.API_ROOT}/script"
+        unreasonable = "9" * 5000
+        opener = SequenceOpener(
+            [http_error(url, 503, retry_after=unreasonable), {"ok": True}]
+        )
+        sleeps: list[float] = []
+
+        api._request_json(
+            url,
+            "token",
+            opener=opener,
+            sleep=sleeps.append,
+            random_source=lambda: 0.0,
+        )
+
+        self.assertEqual([1.0], sleeps)
+
     def test_retry_delays_are_bounded(self):
         url = f"{api.API_ROOT}/script"
         opener = SequenceOpener(
