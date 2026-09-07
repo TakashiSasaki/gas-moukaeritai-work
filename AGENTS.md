@@ -15,7 +15,7 @@ This repository stores and synchronizes many Google Apps Script projects in one 
 
 - `automation/`: **how synchronization is performed**.
   - `stage-1-inventory/`: Drive inventory acquisition, canonical registry/lifecycle reconciliation, and public project-index generation.
-  - `stage-2-inspection/`: read-only Apps Script API inspection and deterministic materialization planning; it must not invoke clasp or mutate project source/state.
+  - `stage-2-inspection/`: read-only Apps Script API inspection and deterministic materialization planning; it must not invoke clasp or mutate project source/state. Manual read-only Apps Script change-signal diagnostics also live here so they reuse the same API semantics without becoming a separate authority.
   - `stage-3-materialization/`: transactional source materialization and observation finalization; it may use clasp only for `pull`.
   - `shared/`: repository, OAuth, and validation primitives shared by stages.
   - `maintenance/`: explicit historical migrations; these are not part of steady-state synchronization.
@@ -40,6 +40,8 @@ Direct Drive API and Apps Script API code must acquire bearer tokens through `au
 ## Synchronization Workflows
 
 Stage 1 and Stage 2/3 use the same GitHub Actions concurrency group, `gas-project-state-writer`, with cancellation disabled. Keep canonical project-state writers serialized; do not introduce a parallel workflow that can mutate the default branch independently.
+
+The manual `.github/workflows/diagnose-apps-script-change-signals.yml` workflow is deliberately outside that writer group because it is read-only. It may observe one Apps Script project and store run artifacts for before/after comparison, but it must not mutate Apps Script, invoke clasp, update `projects/`, write generated public state, commit, or push. Diagnostic observations and comparisons are evidence only; they do not become a canonical authority or silently change steady-state synchronization semantics.
 
 ### Stage 1 — inventory
 
@@ -74,6 +76,8 @@ Do not treat `absent` as authorization to delete source or the project directory
 A valid HTTP `Retry-After` value may select the retry delay, but it must remain bounded. Without a usable `Retry-After`, use bounded exponential backoff with jitter. Ordinary client/auth/permission/not-found failures remain prompt failures rather than being hidden behind retries.
 
 The Stage 2 plan is an ephemeral run artifact in `$RUNNER_TEMP`; it is not canonical repository state and must not be committed.
+
+`automation/stage-2-inspection/diagnose-change-signals.py` is an experimental observer, not part of the recurring Stage 2 plan. It may capture project/file/deployment/version snapshots and compare them across manual runs to test whether `Project.updateTime` predicts downstream changes. A downstream change observed with an unchanged `Project.updateTime` is a counterexample to using that timestamp alone as an invalidation signal. The absence of such a counterexample in a finite experiment must not be promoted to an undocumented Google API guarantee.
 
 ### Stage 3 — materialization/finalization
 
