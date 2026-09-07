@@ -39,11 +39,52 @@ class Validation:
 
 
 def load_json(path: Path, validation: Validation):
+    if path.is_symlink():
+        validation.error(f"JSON path must not be a symlink: {path.relative_to(REPOSITORY_ROOT)}")
+        return None
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         validation.error(f"invalid JSON: {path.relative_to(REPOSITORY_ROOT)}: {exc}")
         return None
+
+
+def _iter_files_without_following_symlinks(
+    root: Path,
+    *,
+    suffix: str | None = None,
+) -> tuple[Path, ...]:
+    """Return files below root without following any symlink component."""
+    if not root.exists() or root.is_symlink() or not root.is_dir():
+        return ()
+    files: list[Path] = []
+    pending = [root]
+    while pending:
+        directory = pending.pop()
+        for entry in sorted(directory.iterdir(), key=lambda item: item.name):
+            if entry.is_symlink():
+                continue
+            if entry.is_dir():
+                pending.append(entry)
+            elif entry.is_file() and (suffix is None or entry.suffix == suffix):
+                files.append(entry)
+    return tuple(sorted(files))
+
+
+def _project_symlinks(project_dir: Path) -> tuple[Path, ...]:
+    """Return symlinks under one lexical project tree without dereferencing them."""
+    if project_dir.is_symlink() or not project_dir.is_dir():
+        return (project_dir,) if project_dir.is_symlink() else ()
+    symlinks: list[Path] = []
+    pending = [project_dir]
+    while pending:
+        directory = pending.pop()
+        for entry in sorted(directory.iterdir(), key=lambda item: item.name):
+            if entry.is_symlink():
+                symlinks.append(entry)
+            elif entry.is_dir():
+                pending.append(entry)
+    return tuple(sorted(symlinks))
 
 
 def validate_python(validation: Validation) -> None:
@@ -80,18 +121,24 @@ def validate_python(validation: Validation) -> None:
 
 
 def validate_json_files(validation: Validation) -> None:
-    roots = [
-        REPOSITORY_ROOT / "projects",
+    project_json_files = _iter_files_without_following_symlinks(PROJECTS_DIR, suffix=".json")
+    other_roots = [
         REPOSITORY_ROOT / "docs",
         REPOSITORY_ROOT / "data",
     ]
-    json_files = sorted(path for root in roots if root.exists() for path in root.rglob("*.json"))
+    other_json_files = sorted(
+        path for root in other_roots if root.exists() for path in root.rglob("*.json")
+    )
+    json_files = tuple(sorted((*project_json_files, *other_json_files)))
     for path in json_files:
         load_json(path, validation)
     print(f"Validated JSON syntax for {len(json_files)} files.")
 
 
 def validate_projects(validation: Validation) -> tuple[set[str], set[str]]:
+    if PROJECTS_DIR.is_symlink():
+        validation.error("projects/ directory must not be a symlink")
+        return set(), set()
     if not PROJECTS_DIR.is_dir():
         validation.error("projects/ directory is missing")
         return set(), set()
@@ -115,15 +162,34 @@ def validate_projects(validation: Validation) -> tuple[set[str], set[str]]:
             validation.error(f"project directory must not be a symlink: {relative_project}")
             continue
 
-        if not clasp_path.is_file():
+        symlinks = _project_symlinks(project_dir)
+        for symlink in symlinks:
+            validation.error(
+                f"project tree must not contain symlinks: {symlink.relative_to(REPOSITORY_ROOT)}"
+            )
+
+        if clasp_path.is_symlink():
+            validation.error(f".clasp.json must not be a symlink: {relative_project}")
+            clasp = None
+        elif not clasp_path.is_file():
             validation.error(f"missing .clasp.json: {relative_project}")
-            continue
+            clasp = None
+        else:
+            clasp = load_json(clasp_path, validation)
 
         if repository_dir.is_symlink() or not repository_dir.is_dir():
             validation.error(f"missing/invalid repository/ directory: {relative_project}")
-        if not metadata_path.is_file():
+        if metadata_path.is_symlink():
+            validation.error(f"repository/metadata.json must not be a symlink: {relative_project}")
+            metadata = None
+        elif not metadata_path.is_file():
             validation.error(f"missing repository/metadata.json: {relative_project}")
-        if legacy_metadata.exists():
+            metadata = None
+        else:
+            metadata = load_json(metadata_path, validation)
+        if legacy_metadata.is_symlink():
+            validation.error(f"legacy root metadata.json must not be a symlink: {relative_project}")
+        elif legacy_metadata.exists():
             validation.error(f"legacy root metadata.json remains after split-layout cutover: {relative_project}")
         if source_dir.exists() and (source_dir.is_symlink() or not source_dir.is_dir()):
             validation.error(f"invalid gas/ source directory: {relative_project}")
@@ -135,11 +201,9 @@ def validate_projects(validation: Validation) -> tuple[set[str], set[str]]:
                     f"{entry.relative_to(REPOSITORY_ROOT)}"
                 )
 
-        clasp = load_json(clasp_path, validation)
-        metadata = load_json(metadata_path, validation) if metadata_path.is_file() else None
-
         if not isinstance(clasp, dict):
-            validation.error(f".clasp.json must contain an object: {clasp_path.relative_to(REPOSITORY_ROOT)}")
+            if clasp is not None:
+                validation.error(f".clasp.json must contain an object: {clasp_path.relative_to(REPOSITORY_ROOT)}")
             continue
 
         script_id = clasp.get("scriptId")
@@ -222,8 +286,8 @@ def main() -> int:
     validation = Validation()
 
     validate_python(validation)
-    validate_json_files(validation)
     project_ids, mismatches = validate_projects(validation)
+    validate_json_files(validation)
     validate_docs_projection(project_ids, validation)
 
     if mismatches:
