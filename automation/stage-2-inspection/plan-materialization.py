@@ -157,6 +157,11 @@ def build_plan(
             "lifecycle": lifecycle,
             "observation": {
                 "appsScriptApi": remote_project,
+                "observationState": {
+                    "files": "observed",
+                    "deployments": "observed",
+                    "versions": "observed",
+                },
                 "files": files,
                 "deployments": deployments,
                 "versions": versions,
