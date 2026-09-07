@@ -179,6 +179,7 @@ function renderRecentProjects() {
     card.type = "button";
     card.className = "recent-project card h-100 w-100 text-start border-0 shadow-sm";
     card.dataset.projectId = project.id;
+    card.setAttribute("aria-pressed", String(project.id === selectedProjectId));
 
     const body = document.createElement("span");
     body.className = "card-body d-block";
@@ -366,9 +367,7 @@ function refreshSelectedStyles() {
   document.querySelectorAll("[data-project-id]").forEach((element) => {
     const selected = element.dataset.projectId === selectedProjectId;
     element.classList.toggle("is-selected", selected);
-    if (element.classList.contains("project-row")) {
-      element.setAttribute("aria-pressed", String(selected));
-    }
+    element.setAttribute("aria-pressed", String(selected));
   });
 }
 
