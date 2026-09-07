@@ -30,6 +30,20 @@ class SplitLayoutValidatorSymlinkTests(unittest.TestCase):
 
             self.assertEqual(validator._project_symlinks(project), (link,))
 
+    def test_project_symlink_scan_rejects_nested_directory_without_following_it(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            project = root / "project"
+            repository = project / "repository"
+            repository.mkdir(parents=True)
+            outside = root / "outside"
+            outside.mkdir()
+            (outside / "metadata.json").write_text("{}", encoding="utf-8")
+            link = repository / "linked"
+            link.symlink_to(outside, target_is_directory=True)
+
+            self.assertEqual(validator._project_symlinks(project), (link,))
+
     def test_file_walk_skips_symlinked_json_leaf(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
