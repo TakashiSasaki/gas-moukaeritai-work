@@ -97,6 +97,21 @@ def _validate_special_directories(project_dir: Path) -> None:
             )
 
 
+def _validate_project_tree_no_symlinks(project_dir: Path) -> None:
+    """Reject every symlink in the lexical project tree before reading or moving data."""
+    pending = [project_dir]
+    while pending:
+        directory = pending.pop()
+        for path in sorted(directory.iterdir(), key=lambda item: item.name):
+            if path.is_symlink():
+                relative = path.relative_to(project_dir).as_posix()
+                raise LayoutMigrationError(
+                    f"{project_dir.name}: project tree contains a symlink: {relative}"
+                )
+            if path.is_dir():
+                pending.append(path)
+
+
 def _classify_root_entries(project_dir: Path) -> tuple[tuple[Path, ...], tuple[Path, ...]]:
     """Classify legacy root entries into GAS source and repository-owned data.
 
@@ -110,12 +125,12 @@ def _classify_root_entries(project_dir: Path) -> tuple[tuple[Path, ...], tuple[P
     repository_entries: list[Path] = []
     excluded = ROOT_KEEP | LEGACY_STANDALONE | {"metadata.json", "repository", "gas"}
     for path in sorted(project_dir.iterdir(), key=lambda item: item.name):
-        if path.name in excluded:
-            continue
         if path.is_symlink():
             raise LayoutMigrationError(
                 f"{project_dir.name}: root symlink cannot be migrated safely: {path.name}"
             )
+        if path.name in excluded:
+            continue
         if path.is_file() and (
             path.suffix.lower() in GAS_SOURCE_SUFFIXES or path.name == GAS_MANIFEST
         ):
@@ -138,6 +153,7 @@ def _legacy_notes(project_dir: Path) -> tuple[bool, tuple[str, ...]]:
 def plan_project(project_dir: Path) -> dict[str, Any]:
     if project_dir.is_symlink() or not project_dir.is_dir():
         raise LayoutMigrationError(f"invalid canonical project directory: {project_dir}")
+    _validate_project_tree_no_symlinks(project_dir)
     _validate_special_directories(project_dir)
     clasp = _read_clasp(project_dir)
     # Force metadata parsing/ambiguity checks before constructing any plan.
@@ -203,6 +219,9 @@ def _write_clasp(project_dir: Path, clasp: dict[str, Any]) -> None:
 
 
 def _apply_project_without_backup(project_dir: Path) -> None:
+    # Re-check immediately before mutation so excluded legacy/control names cannot
+    # be swapped to symlinks after the dry-run planner has validated the tree.
+    _validate_project_tree_no_symlinks(project_dir)
     # The dry-run planner has already rejected metadata conflicts. Apply legacy
     # consolidation first so standalone deployment/version files disappear
     # before generic repository-owned entries are moved.
