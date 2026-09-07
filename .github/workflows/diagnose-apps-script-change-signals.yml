@@ -1,0 +1,90 @@
+name: diagnose-apps-script-change-signals
+
+on:
+  workflow_dispatch:
+    inputs:
+      script_id:
+        description: "Apps Script project ID to observe"
+        required: true
+        type: string
+      baseline_run_id:
+        description: "Optional prior diagnostic workflow run ID to compare against"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v4
+        with:
+          ref: gas.moukaeritai.work
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install direct API dependencies
+        run: python -m pip install requests
+
+      - name: Restore Google credentials
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          umask 077
+          printf '%s' "$CLASPRC_JSON" > ~/.clasprc.json
+
+      - name: Capture current Apps Script signals
+        env:
+          SCRIPT_ID: ${{ inputs.script_id }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/current"
+          python automation/stage-2-inspection/diagnose-change-signals.py snapshot \
+            --script-id "$SCRIPT_ID" \
+            --output "$RUNNER_TEMP/current/snapshot.json"
+
+      - name: Upload current diagnostic snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: apps-script-change-signals-${{ inputs.script_id }}
+          path: ${{ runner.temp }}/current/snapshot.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Download baseline snapshot
+        if: inputs.baseline_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: apps-script-change-signals-${{ inputs.script_id }}
+          path: ${{ runner.temp }}/baseline
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ inputs.baseline_run_id }}
+
+      - name: Compare baseline and current signals
+        if: inputs.baseline_run_id != ''
+        run: |
+          mkdir -p "$RUNNER_TEMP/comparison"
+          python automation/stage-2-inspection/diagnose-change-signals.py compare \
+            --before "$RUNNER_TEMP/baseline/snapshot.json" \
+            --after "$RUNNER_TEMP/current/snapshot.json" \
+            --output "$RUNNER_TEMP/comparison/comparison.json"
+          cat "$RUNNER_TEMP/comparison/comparison.json" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload diagnostic comparison
+        if: inputs.baseline_run_id != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: apps-script-change-signals-comparison-${{ github.run_id }}
+          path: ${{ runner.temp }}/comparison/comparison.json
+          if-no-files-found: error
+          retention-days: 30

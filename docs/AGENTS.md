@@ -42,6 +42,7 @@ Files in this directory define the public-facing static website, including:
 4. Do not treat disappearance from `projects.json` as evidence that the underlying project directory should be deleted.
 5. Do not hand-maintain `projects.json` unless the user explicitly asks for a one-off edit.
 6. If the project list changes, prefer regenerating it through `.github/workflows/stage-1-inventory.yml` or the canonical Stage 1 scripts.
+7. The manual `.github/workflows/diagnose-apps-script-change-signals.yml` workflow is read-only diagnostic evidence only; it must not write `docs/`, regenerate `projects.json`, or become a publication authority.
 
 The public project list is a projection of current Drive lifecycle state. It is not the source of truth for successful source synchronization. That separate checkpoint is stored in each project's `syncState.lastMaterializedAppsScriptUpdateTime`.
 
