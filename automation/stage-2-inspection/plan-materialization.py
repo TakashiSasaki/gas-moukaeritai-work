@@ -175,7 +175,7 @@ def build_plan(
         })
 
     return {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "materializationRequired": any(
             project["materialization"]["required"] for project in projects
         ),
