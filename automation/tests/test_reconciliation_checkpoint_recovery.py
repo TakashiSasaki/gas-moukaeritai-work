@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import importlib.util
 import json
 import sys
@@ -127,6 +128,33 @@ class ReconciliationCheckpointRecoveryTests(unittest.TestCase):
             state = load_metadata(project)["reconciliationState"]
             self.assertEqual(EXPECTED, state["lastDeploymentVersionReconciliationAt"])
             self.assertEqual({"preserve": True}, state["futureSibling"])
+
+    def test_invalid_or_naive_observed_at_is_rejected_before_finalization(self):
+        invalid_values = (
+            "not-a-time",
+            "2026-09-07T00:00:00",
+        )
+        for observed_at in invalid_values:
+            with self.subTest(observed_at=observed_at), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                project = write_project(root, {})
+                before = copy.deepcopy(load_metadata(project))
+                valid_plan = planner.build_plan(
+                    root,
+                    "token",
+                    api=FakeInspectionApi(),
+                    now=NOW,
+                )
+                plan = copy.deepcopy(valid_plan)
+                plan["projects"][0]["metadataReconciliation"]["observedAt"] = observed_at
+
+                with self.assertRaisesRegex(
+                    runner.core.MaterializationPlanError,
+                    "timezone-aware ISO 8601 timestamp",
+                ):
+                    runner.materialize_plan(plan, root, clasp=NoPullClasp())
+
+                self.assertEqual(before, load_metadata(project))
 
 
 if __name__ == "__main__":
