@@ -56,11 +56,11 @@ class SplitLayoutValidatorSymlinkTests(unittest.TestCase):
             link = repository / "linked.json"
             link.symlink_to(outside)
 
-            self.assertEqual(
-                validator._iter_files_without_following_symlinks(root, suffix=".json"),
-                (canonical, outside),
+            discovered = validator._iter_files_without_following_symlinks(
+                root, suffix=".json"
             )
-            self.assertNotIn(link, validator._iter_files_without_following_symlinks(root, suffix=".json"))
+            self.assertEqual(set(discovered), {canonical, outside})
+            self.assertNotIn(link, discovered)
 
 
 if __name__ == "__main__":
