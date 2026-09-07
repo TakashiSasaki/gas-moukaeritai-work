@@ -1,0 +1,46 @@
+{
+  "application.json": null,
+  "deployments": [
+    {
+      "description": "",
+      "id": "AKfycbz47qk0JJvGiUvbE27UW-DdSA4gtDFfCj3rMnwNYRr4",
+      "target": "HEAD"
+    },
+    {
+      "description": "AKfycbwpplXWX3OaQk4rH14nhaHL6fxYLkM49jCIqGF_YBSWVJ1UgQGPdcLUCX2qPzQKasAbwA",
+      "id": "AKfycbwpplXWX3OaQk4rH14nhaHL6fxYLkM49jCIqGF_YBSWVJ1UgQGPdcLUCX2qPzQKasAbwA",
+      "target": "3"
+    },
+    {
+      "description": "公開用２",
+      "id": "AKfycbzBtfmgFKfzJ8EK_Bfe_p9PlvbXEIX6-f7nKltbrhmzajBZeglMsL2Oaipvb0vJLY9yKA",
+      "target": "5"
+    }
+  ],
+  "id": "1BHudGZOnyQdOXwChOICGW4kiR94HBNQ1j0XEFjXcmoCZmjOjFIYRWsDu",
+  "lifecycle": {
+    "driveInventory": "absent"
+  },
+  "versions": [
+    {
+      "description": "公開版",
+      "version": 1
+    },
+    {
+      "description": "No description",
+      "version": 2
+    },
+    {
+      "description": "AKfycbwpplXWX3OaQk4rH14nhaHL6fxYLkM49jCIqGF_YBSWVJ1UgQGPdcLUCX2qPzQKasAbwA",
+      "version": 3
+    },
+    {
+      "description": "公開用２",
+      "version": 4
+    },
+    {
+      "description": "公開用２",
+      "version": 5
+    }
+  ]
+}
