@@ -57,6 +57,20 @@ Remote observation and successful source materialization are separate states. `a
 
 Stage 3 also rejects a plan if a concrete current Drive lifecycle or successful-materialization checkpoint no longer matches the state observed when Stage 2 built the plan.
 
+### Change-signal diagnostics
+
+Workflow: `.github/workflows/diagnose-apps-script-change-signals.yml`
+
+This workflow is a manual, read-only experiment for evaluating whether `Project.updateTime` is a safe invalidation signal for the more specific Stage 2 observations.
+
+- **Trigger:** `workflow_dispatch` only.
+- **Input:** one Apps Script `script_id`, plus an optional previous diagnostic `baseline_run_id`.
+- **Observation:** captures project metadata, metadata-only file observations, deployments, and versions through the same Apps Script API client used by Stage 2.
+- **Output:** uploads the current snapshot as a GitHub Actions artifact. With `baseline_run_id`, it also downloads that prior snapshot and emits a comparison artifact.
+- **Safety:** no Apps Script mutation, no clasp invocation, no repository write permission, and no canonical project-state update.
+
+The comparison explicitly reports any file/deployment/version change observed while `Project.updateTime` remained unchanged. Such a transition is a counterexample to using `Project.updateTime` alone to skip that observation family. Absence of a counterexample in one experiment is evidence about that observed transition only; it is not treated as a new API contract.
+
 ### Validation
 
 Workflow: `.github/workflows/validate-automation.yml`
