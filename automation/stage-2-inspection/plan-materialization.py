@@ -109,7 +109,11 @@ def _materialization_decision(
 def _canonical_files_reusable(metadata: dict[str, Any], script_id: str) -> bool:
     """Return whether existing file metadata is safe to preserve on the fast path."""
     files = metadata.get("files")
-    if not isinstance(files, list) or any(not isinstance(item, dict) for item in files):
+    if (
+        not isinstance(files, list)
+        or not files
+        or any(not isinstance(item, dict) for item in files)
+    ):
         return False
     for item in files:
         if not isinstance(item.get("name"), str) or not item["name"]:
