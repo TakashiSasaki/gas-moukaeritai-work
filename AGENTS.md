@@ -68,7 +68,10 @@ Do not treat `absent` as authorization to delete source or the project directory
 3. emit a deterministic JSON materialization plan;
 4. remain read-only with respect to `projects/<SCRIPT_ID>/`;
 5. fail closed when required Apps Script API observations cannot be obtained;
-6. never invoke clasp or parse human-readable clasp output.
+6. retry only transient Apps Script API HTTP `429`, `500`, `502`, `503`, and `504` responses through the shared request layer with a finite attempt budget and bounded delay; retry exhaustion remains a Stage 2 failure;
+7. never invoke clasp or parse human-readable clasp output.
+
+A valid HTTP `Retry-After` value may select the retry delay, but it must remain bounded. Without a usable `Retry-After`, use bounded exponential backoff with jitter. Ordinary client/auth/permission/not-found failures remain prompt failures rather than being hidden behind retries.
 
 The Stage 2 plan is an ephemeral run artifact in `$RUNNER_TEMP`; it is not canonical repository state and must not be committed.
 

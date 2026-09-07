@@ -47,11 +47,13 @@ Workflow: `.github/workflows/stage-2-3-sync.yml`
 - **Validation:** repository structural validation runs after Stage 3 and before any commit.
 - **Publication:** only `projects/` changes produced by a successful Stage 3 run are committed by this workflow.
 
+The shared Stage 2 Apps Script API client retries transient HTTP `429`, `500`, `502`, `503`, and `504` responses with a finite attempt budget. A valid `Retry-After` header is honored within the configured delay bound; otherwise the client uses bounded exponential backoff with jitter. Retry exhaustion remains fatal, so Stage 2 still fails closed without producing a successful plan or allowing Stage 3/commit to proceed.
+
 `clasp pull` is the only steady-state clasp command. Node.js and clasp are installed only when the Stage 2 plan reports that source materialization is required. Stage 3 still runs when zero pulls are required because unchanged active projects may need their structured Apps Script observations finalized.
 
 Stage 1 and the Stage 2/3 workflow share a repository-writer concurrency group. This serializes their default-branch mutations so a Stage 2 plan and its Stage 3 application are not raced by another canonical project-state writer.
 
-Remote observation and successful source materialization are separate states. `appsScriptApi.updateTime` records observed Apps Script state, while `syncState.lastMaterializedAppsScriptUpdateTime` is the successful-materialization checkpoint used for source freshness. A failed source pull or failed Stage 3 transaction must not advance that checkpoint.
+Remote observation and successful source materialization are separate states. `appsScriptApi.updateTime` records observed Apps Script state, while `syncState.lastMaterializedAppsScriptUpdateTime` is the successful-materialization checkpoint used for source freshness. API retries do not change that distinction. A failed Stage 2 inspection, failed source pull, or failed Stage 3 transaction must not advance that checkpoint.
 
 Stage 3 also rejects a plan if a concrete current Drive lifecycle or successful-materialization checkpoint no longer matches the state observed when Stage 2 built the plan.
 
