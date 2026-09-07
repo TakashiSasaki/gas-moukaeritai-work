@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import sys
+from datetime import datetime
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Callable
@@ -41,6 +42,26 @@ def _optional_timestamp(value: Any, label: str, script_id: str) -> str | None:
             f"{script_id}: {label} must be a non-empty string or null"
         )
     return value
+
+
+def _required_aware_timestamp(value: Any, label: str, script_id: str) -> str:
+    text = _optional_timestamp(value, label, script_id)
+    if text is None:
+        raise core.MaterializationPlanError(
+            f"{script_id}: {label} must be a timezone-aware timestamp"
+        )
+    normalized = text[:-1] + "+00:00" if text.endswith("Z") else text
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError as exc:
+        raise core.MaterializationPlanError(
+            f"{script_id}: {label} must be a timezone-aware ISO 8601 timestamp"
+        ) from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise core.MaterializationPlanError(
+            f"{script_id}: {label} must be a timezone-aware ISO 8601 timestamp"
+        )
+    return text
 
 
 def _current_reconciliation_checkpoint(metadata: dict[str, Any]) -> str | None:
@@ -85,10 +106,15 @@ def _validate_reconciliation_item(item: dict[str, Any]) -> None:
         "metadataReconciliation.checkpointAt",
         script_id,
     )
-    observed_at = _optional_timestamp(
-        reconciliation.get("observedAt"),
-        "metadataReconciliation.observedAt",
-        script_id,
+    observed_at_raw = reconciliation.get("observedAt")
+    observed_at = (
+        _required_aware_timestamp(
+            observed_at_raw,
+            "metadataReconciliation.observedAt",
+            script_id,
+        )
+        if observed_at_raw is not None
+        else None
     )
     lifecycle = item.get("lifecycle")
     observation = item.get("observation")
@@ -178,15 +204,11 @@ def _metadata_with_reconciliation_checkpoint(
             f"current repository checkpoint is {current_checkpoint!r}"
         )
 
-    observed_at = _optional_timestamp(
+    observed_at = _required_aware_timestamp(
         reconciliation.get("observedAt"),
         "metadataReconciliation.observedAt",
         script_id,
     )
-    if observed_at is None:
-        raise core.MaterializationPlanError(
-            f"{script_id}: due metadata reconciliation needs observedAt"
-        )
 
     result = dict(metadata)
     state = result.get("reconciliationState")
