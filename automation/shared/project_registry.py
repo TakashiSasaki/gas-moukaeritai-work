@@ -19,6 +19,7 @@ class ProjectRegistryError(ValueError):
 
 _DEFAULT_REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 _SPLIT_REPOSITORY_DIRNAME = "repository"
+_SPLIT_SOURCE_DIRNAME = "gas"
 _METADATA_FILENAME = "metadata.json"
 
 
@@ -61,6 +62,11 @@ def project_repository_path(project_dir: Path | str) -> Path:
     return Path(project_dir) / _SPLIT_REPOSITORY_DIRNAME
 
 
+def project_source_path(project_dir: Path | str) -> Path:
+    """Return the split-layout GAS/clasp materialization directory."""
+    return Path(project_dir) / _SPLIT_SOURCE_DIRNAME
+
+
 def legacy_metadata_path(project_dir: Path | str) -> Path:
     """Return the pre-split project-root metadata path."""
     return Path(project_dir) / _METADATA_FILENAME
@@ -74,17 +80,30 @@ def split_metadata_path(project_dir: Path | str) -> Path:
 def metadata_path(project_dir: Path | str) -> Path:
     """Resolve the single canonical metadata path during layout migration.
 
-    Split layout wins only when its metadata file exists. Legacy layout remains
-    the write target for projects that have not been migrated yet. Having both
-    files is ambiguous repository state and is rejected fail-closed.
+    Existing metadata determines an already-materialized layout. If neither
+    metadata file exists, an existing `repository/` directory selects the new
+    split layout; otherwise legacy root metadata remains the transitional
+    default. Having both metadata files is ambiguous and rejected fail-closed.
     """
     legacy = legacy_metadata_path(project_dir)
     split = split_metadata_path(project_dir)
-    if legacy.exists() and split.exists():
+    legacy_exists = legacy.exists()
+    split_exists = split.exists()
+    if legacy_exists and split_exists:
         raise ProjectRegistryError(
             f"ambiguous project metadata: both {legacy} and {split} exist"
         )
-    if split.exists():
+    if split_exists:
+        return split
+    if legacy_exists:
+        return legacy
+
+    repository_dir = project_repository_path(project_dir)
+    if repository_dir.exists():
+        if not repository_dir.is_dir():
+            raise ProjectRegistryError(
+                f"split repository path is not a directory: {repository_dir}"
+            )
         return split
     return legacy
 
@@ -135,9 +154,9 @@ def write_metadata(project_dir: Path | str, metadata: dict[str, Any]) -> None:
     """Atomically replace canonical metadata with deterministic UTF-8 JSON.
 
     Existing split projects keep writing `repository/metadata.json`; existing
-    legacy projects keep writing root `metadata.json`. A project with no
-    metadata yet remains legacy until the explicit layout migration changes the
-    repository-wide creation policy.
+    legacy projects keep writing root `metadata.json`. For a project with no
+    metadata yet, Stage 1 can opt into split layout by creating `repository/`
+    before calling this function.
     """
     directory = Path(project_dir)
     if not directory.is_dir():
