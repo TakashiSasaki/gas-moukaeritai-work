@@ -65,7 +65,12 @@ def _write_clasp(directory: Path, script_id: str) -> None:
         return
     temporary = clasp_path.with_name(clasp_path.name + ".tmp")
     temporary.write_text(
-        json.dumps({"scriptId": script_id}, ensure_ascii=False, indent=2),
+        json.dumps(
+            {"scriptId": script_id, "rootDir": "gas"},
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        ) + "\n",
         encoding="utf-8",
     )
     os.replace(temporary, clasp_path)
