@@ -36,5 +36,8 @@ jobs:
           python automation/stage-1-inventory/generate-public-project-index.py
           git diff --exit-code -- docs/projects.json
 
+      - name: Check Project Explorer JavaScript syntax
+        run: node --check docs/index.js
+
       - name: Run automation unit tests
         run: PYTHONPATH=. python -m unittest discover -s automation/tests -p 'test_*.py'
