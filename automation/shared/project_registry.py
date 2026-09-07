@@ -80,10 +80,12 @@ def split_metadata_path(project_dir: Path | str) -> Path:
 def metadata_path(project_dir: Path | str) -> Path:
     """Resolve the single canonical metadata path during layout migration.
 
-    Existing metadata determines an already-materialized layout. If neither
-    metadata file exists, an existing `repository/` directory selects the new
-    split layout; otherwise legacy root metadata remains the transitional
-    default. Having both metadata files is ambiguous and rejected fail-closed.
+    Existing metadata determines an already-materialized layout. Split metadata
+    wins only when it is the sole metadata file; legacy metadata remains readable
+    and writable while the repository-wide migration is in flight. If neither
+    metadata file exists, the canonical destination is the split layout so every
+    newly discovered project is created directly in the target structure. Having
+    both metadata files is ambiguous and rejected fail-closed.
     """
     legacy = legacy_metadata_path(project_dir)
     split = split_metadata_path(project_dir)
@@ -99,13 +101,11 @@ def metadata_path(project_dir: Path | str) -> Path:
         return legacy
 
     repository_dir = project_repository_path(project_dir)
-    if repository_dir.exists():
-        if not repository_dir.is_dir():
-            raise ProjectRegistryError(
-                f"split repository path is not a directory: {repository_dir}"
-            )
-        return split
-    return legacy
+    if repository_dir.exists() and not repository_dir.is_dir():
+        raise ProjectRegistryError(
+            f"split repository path is not a directory: {repository_dir}"
+        )
+    return split
 
 
 def metadata_exists(project_dir: Path | str) -> bool:
@@ -154,9 +154,8 @@ def write_metadata(project_dir: Path | str, metadata: dict[str, Any]) -> None:
     """Atomically replace canonical metadata with deterministic UTF-8 JSON.
 
     Existing split projects keep writing `repository/metadata.json`; existing
-    legacy projects keep writing root `metadata.json`. For a project with no
-    metadata yet, Stage 1 can opt into split layout by creating `repository/`
-    before calling this function.
+    legacy projects keep writing root `metadata.json`. Projects with no metadata
+    yet are written directly to `repository/metadata.json`.
     """
     directory = Path(project_dir)
     if not directory.is_dir():
@@ -168,6 +167,7 @@ def write_metadata(project_dir: Path | str, metadata: dict[str, Any]) -> None:
     serialized = json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
     temporary_name: str | None = None
     try:
+        destination.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(
             mode="w",
             encoding="utf-8",
