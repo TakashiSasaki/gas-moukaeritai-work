@@ -7,7 +7,8 @@ The target layout is:
       .clasp.json              # rootDir == "gas"
       README.md                # optional human-facing landing page
       gas/                     # GAS/clasp materialized files only
-      repository/metadata.json # repository-maintained machine state
+      repository/              # repository-owned state and supplemental assets
+        metadata.json
 
 The default mode is read-only. Pass ``--apply`` to perform the migration.
 This utility is maintenance-only and is not part of steady-state Stage 1/2/3.
@@ -34,7 +35,6 @@ from automation.shared.project_registry import (
     ProjectRegistryError,
     get_script_id,
     iter_project_directories,
-    legacy_metadata_path,
     load_clasp,
     load_metadata,
     metadata_path,
@@ -43,7 +43,8 @@ from automation.shared.project_registry import (
     split_metadata_path,
 )
 
-SOURCE_SUFFIXES = {".js", ".html", ".json"}
+GAS_SOURCE_SUFFIXES = {".js", ".html"}
+GAS_MANIFEST = "appsscript.json"
 ROOT_KEEP = {".clasp.json", "README.md"}
 LEGACY_STANDALONE = {
     "deployments.json",
@@ -54,7 +55,7 @@ LEGACY_STANDALONE = {
 
 
 class LayoutMigrationError(ValueError):
-    """Raised when a project cannot be migrated without guessing ownership."""
+    """Raised when project layout state is unsafe or ambiguous to migrate."""
 
 
 def _load_sibling(name: str, filename: str) -> ModuleType:
@@ -96,31 +97,32 @@ def _validate_special_directories(project_dir: Path) -> None:
             )
 
 
-def _source_candidates(project_dir: Path) -> tuple[Path, ...]:
-    """Return flat root files that can be classified as GAS materialization.
+def _classify_root_entries(project_dir: Path) -> tuple[tuple[Path, ...], tuple[Path, ...]]:
+    """Classify legacy root entries into GAS source and repository-owned data.
 
-    Anything outside the known control/state names must look like a materialized
-    Apps Script file. Directories and unknown suffixes are rejected rather than
-    guessed, making the bulk migration fail closed on unexpected repository data.
+    Apps Script/clasp materialization is flat and consists of server-side
+    JavaScript, HTML files, and the single ``appsscript.json`` manifest. Any
+    other regular file or directory is therefore repository-owned supplemental
+    state and moves under ``repository/``. Symlinks are rejected because their
+    ownership and destination boundary cannot be proven lexically.
     """
-    candidates: list[Path] = []
+    sources: list[Path] = []
+    repository_entries: list[Path] = []
+    excluded = ROOT_KEEP | LEGACY_STANDALONE | {"metadata.json", "repository", "gas"}
     for path in sorted(project_dir.iterdir(), key=lambda item: item.name):
-        if path.name in ROOT_KEEP | LEGACY_STANDALONE | {"metadata.json", "repository", "gas"}:
+        if path.name in excluded:
             continue
         if path.is_symlink():
             raise LayoutMigrationError(
-                f"{project_dir.name}: unclassified root symlink: {path.name}"
+                f"{project_dir.name}: root symlink cannot be migrated safely: {path.name}"
             )
-        if path.is_dir():
-            raise LayoutMigrationError(
-                f"{project_dir.name}: unclassified root directory: {path.name}"
-            )
-        if path.suffix.lower() not in SOURCE_SUFFIXES:
-            raise LayoutMigrationError(
-                f"{project_dir.name}: unclassified root file: {path.name}"
-            )
-        candidates.append(path)
-    return tuple(candidates)
+        if path.is_file() and (
+            path.suffix.lower() in GAS_SOURCE_SUFFIXES or path.name == GAS_MANIFEST
+        ):
+            sources.append(path)
+        else:
+            repository_entries.append(path)
+    return tuple(sources), tuple(repository_entries)
 
 
 def _legacy_notes(project_dir: Path) -> tuple[bool, tuple[str, ...]]:
@@ -141,7 +143,7 @@ def plan_project(project_dir: Path) -> dict[str, Any]:
     # Force metadata parsing/ambiguity checks before constructing any plan.
     load_metadata(project_dir, allow_missing=False)
     legacy_changed, legacy_notes = _legacy_notes(project_dir)
-    sources = _source_candidates(project_dir)
+    sources, repository_entries = _classify_root_entries(project_dir)
 
     current_metadata = metadata_path(project_dir)
     target_metadata = split_metadata_path(project_dir)
@@ -155,6 +157,14 @@ def plan_project(project_dir: Path) -> dict[str, Any]:
                 f"{project_dir.name}: source destination already exists: gas/{source.name}"
             )
 
+    repository_root = project_repository_path(project_dir)
+    for entry in repository_entries:
+        destination = repository_root / entry.name
+        if destination.exists():
+            raise LayoutMigrationError(
+                f"{project_dir.name}: repository destination already exists: repository/{entry.name}"
+            )
+
     root_dir_change = clasp.get("rootDir") != "gas"
     actions: list[str] = []
     actions.extend(legacy_notes)
@@ -162,14 +172,23 @@ def plan_project(project_dir: Path) -> dict[str, Any]:
         actions.append("move metadata.json -> repository/metadata.json")
     for source in sources:
         actions.append(f"move {source.name} -> gas/{source.name}")
+    for entry in repository_entries:
+        actions.append(f"move {entry.name} -> repository/{entry.name}")
     if root_dir_change:
         actions.append("set .clasp.json rootDir -> gas")
 
     return {
         "scriptId": project_dir.name,
-        "changed": bool(legacy_changed or metadata_move or sources or root_dir_change),
+        "changed": bool(
+            legacy_changed
+            or metadata_move
+            or sources
+            or repository_entries
+            or root_dir_change
+        ),
         "actions": actions,
         "sourceFiles": [source.name for source in sources],
+        "repositoryEntries": [entry.name for entry in repository_entries],
     }
 
 
@@ -184,23 +203,23 @@ def _write_clasp(project_dir: Path, clasp: dict[str, Any]) -> None:
 
 
 def _apply_project_without_backup(project_dir: Path) -> None:
-    # The dry-run planner has already rejected ownership ambiguity and legacy
-    # metadata conflicts. Apply legacy consolidation first so standalone files
-    # never get mistaken for GAS source.
+    # The dry-run planner has already rejected metadata conflicts. Apply legacy
+    # consolidation first so standalone deployment/version files disappear
+    # before generic repository-owned entries are moved.
     legacy_migration.migrate_project(project_dir, apply=True)
 
     current_metadata = metadata_path(project_dir)
-    target_repository = project_repository_path(project_dir)
+    repository_root = project_repository_path(project_dir)
     target_metadata = split_metadata_path(project_dir)
     if current_metadata != target_metadata:
-        target_repository.mkdir(parents=True, exist_ok=True)
+        repository_root.mkdir(parents=True, exist_ok=True)
         if target_metadata.exists():
             raise LayoutMigrationError(
                 f"{project_dir.name}: split metadata destination already exists"
             )
         current_metadata.replace(target_metadata)
 
-    sources = _source_candidates(project_dir)
+    sources, repository_entries = _classify_root_entries(project_dir)
     if sources:
         source_root = project_source_path(project_dir)
         source_root.mkdir(parents=True, exist_ok=True)
@@ -211,6 +230,16 @@ def _apply_project_without_backup(project_dir: Path) -> None:
                     f"{project_dir.name}: source destination already exists: gas/{source.name}"
                 )
             source.replace(destination)
+
+    if repository_entries:
+        repository_root.mkdir(parents=True, exist_ok=True)
+        for entry in repository_entries:
+            destination = repository_root / entry.name
+            if destination.exists():
+                raise LayoutMigrationError(
+                    f"{project_dir.name}: repository destination already exists: repository/{entry.name}"
+                )
+            entry.replace(destination)
 
     clasp = _read_clasp(project_dir)
     clasp["rootDir"] = "gas"
