@@ -89,7 +89,7 @@ jobs:
 
       - name: Materialize sources and finalize observations
         run: |
-          python automation/stage-3-materialization/materialize.py \
+          python automation/stage-3-materialization/run-materialization.py \
             --plan "$RUNNER_TEMP/stage-2-plan.json" \
             --output "$RUNNER_TEMP/stage-3-result.json"
 
