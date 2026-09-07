@@ -87,6 +87,20 @@ def _project_symlinks(project_dir: Path) -> tuple[Path, ...]:
     return tuple(sorted(symlinks))
 
 
+def _project_directories(projects_dir: Path, validation: Validation) -> tuple[Path, ...]:
+    """Enumerate project directories only after rejecting every top-level symlink."""
+    project_dirs: list[Path] = []
+    for entry in sorted(projects_dir.iterdir(), key=lambda item: item.name):
+        if entry.is_symlink():
+            validation.error(
+                f"project entry must not be a symlink: {entry.relative_to(REPOSITORY_ROOT)}"
+            )
+            continue
+        if entry.is_dir():
+            project_dirs.append(entry)
+    return tuple(project_dirs)
+
+
 def validate_python(validation: Validation) -> None:
     roots = [
         REPOSITORY_ROOT / "automation",
@@ -145,7 +159,7 @@ def validate_projects(validation: Validation) -> tuple[set[str], set[str]]:
 
     project_ids: set[str] = set()
     mismatched_directory_names: set[str] = set()
-    project_dirs = sorted(path for path in PROJECTS_DIR.iterdir() if path.is_dir())
+    project_dirs = _project_directories(PROJECTS_DIR, validation)
 
     if not project_dirs:
         validation.error("projects/ contains no project directories")
