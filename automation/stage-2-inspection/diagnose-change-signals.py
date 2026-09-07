@@ -66,6 +66,30 @@ def _rfc3339(timestamp: datetime) -> str:
     return timestamp.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def _valid_rfc3339_timestamp(value: Any) -> str | None:
+    """Return a non-empty timezone-aware RFC3339-like timestamp or None."""
+    if not isinstance(value, str) or not value:
+        return None
+    normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return None
+    return value
+
+
+def _capture_status(before: Any, after: Any) -> tuple[str, str | None]:
+    before_time = _valid_rfc3339_timestamp(before)
+    after_time = _valid_rfc3339_timestamp(after)
+    if before_time is None or after_time is None:
+        return "project-update-time-unavailable", None
+    if before_time != after_time:
+        return "project-update-time-changed-during-capture", None
+    return "stable", before_time
+
+
 def capture_snapshot(
     script_id: str,
     access_token: str,
@@ -73,28 +97,42 @@ def capture_snapshot(
     api: Any = None,
     now: Callable[[], datetime] = _utc_now,
 ) -> dict[str, Any]:
-    """Capture the four Stage 2 observation families for one script project."""
+    """Capture one bracketed Stage 2 observation for a single script project."""
     if not isinstance(script_id, str) or not script_id.strip():
         raise ValueError("script_id must be a non-empty string")
 
     api = api or apps_script_api
-    remote_project = api.get_project(script_id, access_token)
+    remote_project_before = api.get_project(script_id, access_token)
     files = _stable_sort(api.get_project_files_metadata(script_id, access_token), "name", "type")
     deployments = _stable_sort(api.list_deployments(script_id, access_token), "deploymentId")
     versions = _stable_sort(api.list_versions(script_id, access_token), "versionNumber")
+    remote_project_after = api.get_project(script_id, access_token)
+
+    before_update_time = remote_project_before.get("updateTime")
+    after_update_time = remote_project_after.get("updateTime")
+    capture_status, stable_update_time = _capture_status(
+        before_update_time,
+        after_update_time,
+    )
 
     observations = {
-        "project": remote_project,
+        "project": remote_project_after,
         "files": files,
         "deployments": deployments,
         "versions": versions,
     }
     return {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "kind": "apps-script-change-signal-snapshot",
         "scriptId": script_id,
         "observedAt": _rfc3339(now()),
-        "projectUpdateTime": remote_project.get("updateTime"),
+        "captureStatus": capture_status,
+        "captureConclusive": capture_status == "stable",
+        "projectUpdateTime": stable_update_time,
+        "projectUpdateTimeBracket": {
+            "before": before_update_time,
+            "after": after_update_time,
+        },
         "fingerprints": {
             section: _fingerprint(value) for section, value in observations.items()
         },
@@ -109,10 +147,32 @@ def _load_snapshot(path: Path) -> dict[str, Any]:
         raise ValueError(f"cannot read diagnostic snapshot {path}: {exc}") from exc
     if not isinstance(payload, dict):
         raise ValueError(f"diagnostic snapshot must be an object: {path}")
-    if payload.get("schemaVersion") != 1 or payload.get("kind") != "apps-script-change-signal-snapshot":
+    if payload.get("schemaVersion") != 2 or payload.get("kind") != "apps-script-change-signal-snapshot":
         raise ValueError(f"unsupported diagnostic snapshot schema: {path}")
     if not isinstance(payload.get("scriptId"), str) or not payload["scriptId"]:
         raise ValueError(f"diagnostic snapshot has no scriptId: {path}")
+
+    status = payload.get("captureStatus")
+    conclusive = payload.get("captureConclusive")
+    bracket = payload.get("projectUpdateTimeBracket")
+    if status not in {
+        "stable",
+        "project-update-time-unavailable",
+        "project-update-time-changed-during-capture",
+    }:
+        raise ValueError(f"diagnostic snapshot has invalid captureStatus: {path}")
+    if not isinstance(conclusive, bool) or conclusive is not (status == "stable"):
+        raise ValueError(f"diagnostic snapshot has inconsistent captureConclusive: {path}")
+    if not isinstance(bracket, dict):
+        raise ValueError(f"diagnostic snapshot has no projectUpdateTimeBracket: {path}")
+
+    expected_status, expected_update_time = _capture_status(
+        bracket.get("before"),
+        bracket.get("after"),
+    )
+    if status != expected_status or payload.get("projectUpdateTime") != expected_update_time:
+        raise ValueError(f"diagnostic snapshot has inconsistent Project.updateTime bracket: {path}")
+
     fingerprints = payload.get("fingerprints")
     observations = payload.get("observations")
     if not isinstance(fingerprints, dict) or not isinstance(observations, dict):
@@ -123,8 +183,23 @@ def _load_snapshot(path: Path) -> dict[str, Any]:
     return payload
 
 
+def _comparison_inconclusive_reasons(
+    before: dict[str, Any],
+    after: dict[str, Any],
+) -> list[str]:
+    reasons: list[str] = []
+    for label, snapshot in (("before", before), ("after", after)):
+        status = snapshot.get("captureStatus")
+        if status != "stable":
+            reasons.append(f"{label}-{status or 'capture-status-unavailable'}")
+            continue
+        if _valid_rfc3339_timestamp(snapshot.get("projectUpdateTime")) is None:
+            reasons.append(f"{label}-project-update-time-unavailable")
+    return reasons
+
+
 def compare_snapshots(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
-    """Compare two snapshots and surface unsafe Project.updateTime counterexamples."""
+    """Compare two snapshots and surface only conclusive timestamp counterexamples."""
     before_id = before.get("scriptId")
     after_id = after.get("scriptId")
     if not isinstance(before_id, str) or not before_id or before_id != after_id:
@@ -139,21 +214,42 @@ def compare_snapshots(before: dict[str, Any], after: dict[str, Any]) -> dict[str
         section: before_fingerprints.get(section) != after_fingerprints.get(section)
         for section in ("project", "files", "deployments", "versions")
     }
-    before_update_time = before.get("projectUpdateTime")
-    after_update_time = after.get("projectUpdateTime")
-    project_update_time_changed = before_update_time != after_update_time
-    downstream_changed_without_project_update_time = [
-        section
-        for section in ("files", "deployments", "versions")
-        if sections[section] and not project_update_time_changed
-    ]
+    before_update_time = _valid_rfc3339_timestamp(before.get("projectUpdateTime"))
+    after_update_time = _valid_rfc3339_timestamp(after.get("projectUpdateTime"))
+    inconclusive_reasons = _comparison_inconclusive_reasons(before, after)
+    conclusive = not inconclusive_reasons
+    project_update_time_changed = (
+        before_update_time != after_update_time if conclusive else None
+    )
+    downstream_changed_without_project_update_time = (
+        [
+            section
+            for section in ("files", "deployments", "versions")
+            if sections[section] and project_update_time_changed is False
+        ]
+        if conclusive
+        else []
+    )
+
+    if not conclusive:
+        evaluation = "inconclusive"
+        sufficient_for_transition: bool | None = None
+    elif downstream_changed_without_project_update_time:
+        evaluation = "counterexample-observed"
+        sufficient_for_transition = False
+    else:
+        evaluation = "no-counterexample-observed"
+        sufficient_for_transition = True
 
     return {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "kind": "apps-script-change-signal-comparison",
         "scriptId": before_id,
         "beforeObservedAt": before.get("observedAt"),
         "afterObservedAt": after.get("observedAt"),
+        "conclusive": conclusive,
+        "inconclusiveReasons": inconclusive_reasons,
+        "counterexampleEvaluation": evaluation,
         "projectUpdateTime": {
             "before": before_update_time,
             "after": after_update_time,
@@ -161,7 +257,7 @@ def compare_snapshots(before: dict[str, Any], after: dict[str, Any]) -> dict[str
         },
         "sectionsChanged": sections,
         "downstreamChangedWithoutProjectUpdateTime": downstream_changed_without_project_update_time,
-        "projectUpdateTimeSufficientForObservedTransition": not downstream_changed_without_project_update_time,
+        "projectUpdateTimeSufficientForObservedTransition": sufficient_for_transition,
     }
 
 
@@ -183,7 +279,8 @@ def _snapshot_command(args: argparse.Namespace) -> int:
     write_json(snapshot, args.output)
     print(
         "Captured Apps Script change-signal snapshot for "
-        f"{args.script_id}: project.updateTime={snapshot['projectUpdateTime']!r}"
+        f"{args.script_id}: captureStatus={snapshot['captureStatus']}, "
+        f"project.updateTime={snapshot['projectUpdateTime']!r}"
     )
     return 0
 
@@ -197,6 +294,14 @@ def _compare_command(args: argparse.Namespace) -> int:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
     write_json(comparison, args.output)
+
+    if not comparison["conclusive"]:
+        print(
+            "Comparison is inconclusive: "
+            + ", ".join(comparison["inconclusiveReasons"])
+        )
+        return 0
+
     counterexamples = comparison["downstreamChangedWithoutProjectUpdateTime"]
     if counterexamples:
         print(
