@@ -112,6 +112,44 @@ def _validate_project_tree_no_symlinks(project_dir: Path) -> None:
                 pending.append(path)
 
 
+def _validate_casefolded_destinations(
+    project_dir: Path,
+    destination_dir: Path,
+    incoming_names: tuple[str, ...],
+    *,
+    label: str,
+) -> None:
+    """Reject destination names that would collide on case-insensitive filesystems."""
+    existing: dict[str, str] = {}
+    if destination_dir.exists():
+        for entry in sorted(destination_dir.iterdir(), key=lambda item: item.name):
+            folded = entry.name.casefold()
+            previous = existing.get(folded)
+            if previous is not None and previous != entry.name:
+                raise LayoutMigrationError(
+                    f"{project_dir.name}: {label}/ already contains a case-insensitive "
+                    f"name collision: {previous} vs {entry.name}"
+                )
+            existing[folded] = entry.name
+
+    planned: dict[str, str] = {}
+    for name in incoming_names:
+        folded = name.casefold()
+        previous = planned.get(folded)
+        if previous is not None:
+            raise LayoutMigrationError(
+                f"{project_dir.name}: migration would create a case-insensitive "
+                f"{label}/ collision: {previous} vs {name}"
+            )
+        existing_name = existing.get(folded)
+        if existing_name is not None:
+            raise LayoutMigrationError(
+                f"{project_dir.name}: case-insensitive destination collision: "
+                f"{label}/{name} conflicts with existing {label}/{existing_name}"
+            )
+        planned[folded] = name
+
+
 def _classify_root_entries(project_dir: Path) -> tuple[tuple[Path, ...], tuple[Path, ...]]:
     """Classify legacy root entries into GAS source and repository-owned data.
 
@@ -166,6 +204,12 @@ def plan_project(project_dir: Path) -> dict[str, Any]:
     metadata_move = current_metadata != target_metadata
 
     source_root = project_source_path(project_dir)
+    _validate_casefolded_destinations(
+        project_dir,
+        source_root,
+        tuple(source.name for source in sources),
+        label="gas",
+    )
     for source in sources:
         destination = source_root / source.name
         if destination.exists():
@@ -174,6 +218,15 @@ def plan_project(project_dir: Path) -> dict[str, Any]:
             )
 
     repository_root = project_repository_path(project_dir)
+    repository_incoming = [entry.name for entry in repository_entries]
+    if metadata_move:
+        repository_incoming.append("metadata.json")
+    _validate_casefolded_destinations(
+        project_dir,
+        repository_root,
+        tuple(repository_incoming),
+        label="repository",
+    )
     for entry in repository_entries:
         destination = repository_root / entry.name
         if destination.exists():
@@ -231,6 +284,12 @@ def _apply_project_without_backup(project_dir: Path) -> None:
     repository_root = project_repository_path(project_dir)
     target_metadata = split_metadata_path(project_dir)
     if current_metadata != target_metadata:
+        _validate_casefolded_destinations(
+            project_dir,
+            repository_root,
+            ("metadata.json",),
+            label="repository",
+        )
         repository_root.mkdir(parents=True, exist_ok=True)
         if target_metadata.exists():
             raise LayoutMigrationError(
@@ -239,8 +298,14 @@ def _apply_project_without_backup(project_dir: Path) -> None:
         current_metadata.replace(target_metadata)
 
     sources, repository_entries = _classify_root_entries(project_dir)
+    source_root = project_source_path(project_dir)
+    _validate_casefolded_destinations(
+        project_dir,
+        source_root,
+        tuple(source.name for source in sources),
+        label="gas",
+    )
     if sources:
-        source_root = project_source_path(project_dir)
         source_root.mkdir(parents=True, exist_ok=True)
         for source in sources:
             destination = source_root / source.name
@@ -250,6 +315,12 @@ def _apply_project_without_backup(project_dir: Path) -> None:
                 )
             source.replace(destination)
 
+    _validate_casefolded_destinations(
+        project_dir,
+        repository_root,
+        tuple(entry.name for entry in repository_entries),
+        label="repository",
+    )
     if repository_entries:
         repository_root.mkdir(parents=True, exist_ok=True)
         for entry in repository_entries:
