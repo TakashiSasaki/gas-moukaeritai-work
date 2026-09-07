@@ -68,10 +68,11 @@ Do not treat `absent` as authorization to delete source or the project directory
 1. use the Google Apps Script API directly for project metadata, file metadata, deployments, and versions;
 2. skip projects whose Drive lifecycle is `absent`;
 3. emit a deterministic JSON materialization plan;
-4. remain read-only with respect to `projects/<SCRIPT_ID>/`;
-5. fail closed when required Apps Script API observations cannot be obtained;
-6. retry only transient Apps Script API HTTP `429`, `500`, `502`, `503`, and `504` responses through the shared request layer with a finite attempt budget and bounded delay; retry exhaustion remains a Stage 2 failure;
-7. never invoke clasp or parse human-readable clasp output.
+4. distinguish each `files`, `deployments`, and `versions` family as `observed` or `not-observed` in the plan; a `not-observed` family must not carry a stale payload that could be mistaken for a fresh observation;
+5. remain read-only with respect to `projects/<SCRIPT_ID>/`;
+6. fail closed when required Apps Script API observations cannot be obtained;
+7. retry only transient Apps Script API HTTP `429`, `500`, `502`, `503`, and `504` responses through the shared request layer with a finite attempt budget and bounded delay; retry exhaustion remains a Stage 2 failure;
+8. never invoke clasp or parse human-readable clasp output.
 
 A valid HTTP `Retry-After` value may select the retry delay, but it must remain bounded. Without a usable `Retry-After`, use bounded exponential backoff with jitter. Ordinary client/auth/permission/not-found failures remain prompt failures rather than being hidden behind retries.
 
@@ -90,10 +91,12 @@ The same workflow passes the Stage 2 plan directly to `automation/stage-3-materi
 5. preserve unrelated metadata namespaces, especially Stage 1-owned `driveApi` and `lifecycle`;
 6. advance `syncState.lastMaterializedAppsScriptUpdateTime` only to the pre-pull Apps Script `updateTime` carried by the Stage 2 plan and only after successful source materialization;
 7. leave the checkpoint unchanged when no correlated pre-pull `updateTime` exists, so the next inspection remains fail-safe;
-8. refresh structured Apps Script/file/deployment/version observations for unchanged active projects without invoking clasp;
-9. leave Drive-absent projects untouched;
-10. honor a safe project-local `.clasp.json.rootDir` and reject source/root paths that can escape the canonical project directory;
-11. reject a plan when a concrete current Drive lifecycle or successful-materialization checkpoint no longer matches the Stage 2 plan.
+8. replace canonical `files`, `deployments`, and `versions` metadata only when the corresponding Stage 2 family is `observed`; preserve the current canonical family unchanged when it is `not-observed`;
+9. require an observed `files` family before any source materialization so pull validation and stale-source cleanup never operate from stale metadata;
+10. refresh structured Apps Script/file/deployment/version observations for unchanged active projects without invoking clasp when those families were observed;
+11. leave Drive-absent projects untouched;
+12. honor a safe project-local `.clasp.json.rootDir` and reject source/root paths that can escape the canonical project directory;
+13. reject a plan when a concrete current Drive lifecycle or successful-materialization checkpoint no longer matches the Stage 2 plan.
 
 Node.js and clasp installation are conditional on `materializationRequired=true`. Do **not** skip Stage 3 when no pull is required: it may still need to finalize structured observations for unchanged active projects.
 
