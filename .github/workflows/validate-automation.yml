@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -17,11 +17,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout pull request branch
+      - name: Checkout pull request
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -34,24 +31,10 @@ jobs:
       - name: Validate automation and repository state
         run: python .github/scripts/validate-automation.py
 
-      - name: Generate canonical public project index
-        run: python automation/stage-1-inventory/generate-public-project-index.py
-
-      - name: Commit canonical project index to repair branch
-        if: github.event_name == 'pull_request' && github.head_ref == 'site/project-explorer-stage-a'
-        run: |
-          if git diff --quiet -- docs/projects.json; then
-            echo 'Canonical project index already committed.'
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add docs/projects.json
-          git commit -m 'Publish enriched Project Explorer catalog'
-          git push origin HEAD:${{ github.head_ref }}
-
       - name: Verify canonical public project index
-        run: git diff --exit-code -- docs/projects.json
+        run: |
+          python automation/stage-1-inventory/generate-public-project-index.py
+          git diff --exit-code -- docs/projects.json
 
       - name: Run automation unit tests
         run: PYTHONPATH=. python -m unittest discover -s automation/tests -p 'test_*.py'
