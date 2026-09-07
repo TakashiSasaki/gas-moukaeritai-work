@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -17,8 +17,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout pull request
+      - name: Checkout pull request branch
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -34,12 +37,18 @@ jobs:
       - name: Generate canonical public project index
         run: python automation/stage-1-inventory/generate-public-project-index.py
 
-      - name: Upload generated project index for repair
-        uses: actions/upload-artifact@v4
-        with:
-          name: generated-project-index
-          path: docs/projects.json
-          if-no-files-found: error
+      - name: Commit canonical project index to repair branch
+        if: github.event_name == 'pull_request' && github.head_ref == 'site/project-explorer-stage-a'
+        run: |
+          if git diff --quiet -- docs/projects.json; then
+            echo 'Canonical project index already committed.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/projects.json
+          git commit -m 'Publish enriched Project Explorer catalog'
+          git push origin HEAD:${{ github.head_ref }}
 
       - name: Verify canonical public project index
         run: git diff --exit-code -- docs/projects.json
