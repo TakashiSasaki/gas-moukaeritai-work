@@ -498,6 +498,7 @@ document.addEventListener("DOMContentLoaded", () => {
         scrollIntoView: window.matchMedia("(max-width: 991.98px)").matches,
       });
     } else {
+      const detailHadFocus = elements.detail.contains(document.activeElement);
       selectedProjectId = null;
       refreshSelectedStyles();
       const body = document.createElement("div");
@@ -509,6 +510,9 @@ document.addEventListener("DOMContentLoaded", () => {
       elements.detail.replaceChildren(body);
       elements.detail.removeAttribute("aria-labelledby");
       elements.detail.removeAttribute("tabindex");
+      if (detailHadFocus) {
+        elements.search.focus();
+      }
     }
   });
 
