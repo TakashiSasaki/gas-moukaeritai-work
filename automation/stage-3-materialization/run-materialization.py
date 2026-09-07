@@ -43,22 +43,21 @@ def _optional_timestamp(value: Any, label: str, script_id: str) -> str | None:
     return value
 
 
-def _current_reconciliation_checkpoint(
-    metadata: dict[str, Any],
-    script_id: str,
-) -> str | None:
+def _current_reconciliation_checkpoint(metadata: dict[str, Any]) -> str | None:
+    """Normalize canonical checkpoint state exactly as Stage 2 does.
+
+    Invalid/missing namespaces and empty/non-string checkpoint values are
+    intentionally equivalent to no checkpoint. Stage 2 treats those states as
+    reconciliation-due, so Stage 3 must allow a successful fresh pair to heal
+    them instead of making the repository permanently unreconcilable.
+    """
     state = metadata.get("reconciliationState")
-    if state is None:
-        return None
     if not isinstance(state, dict):
-        raise core.MaterializationPlanError(
-            f"{script_id}: metadata reconciliationState must be an object"
-        )
-    return _optional_timestamp(
-        state.get(RECONCILIATION_CHECKPOINT_FIELD),
-        f"metadata reconciliationState.{RECONCILIATION_CHECKPOINT_FIELD}",
-        script_id,
-    )
+        return None
+    checkpoint = state.get(RECONCILIATION_CHECKPOINT_FIELD)
+    if isinstance(checkpoint, str) and checkpoint:
+        return checkpoint
+    return None
 
 
 def _validate_reconciliation_item(item: dict[str, Any]) -> None:
@@ -132,10 +131,9 @@ def _validate_reconciliation_item(item: dict[str, Any]) -> None:
                 f"{script_id}: skipped metadata reconciliation requires not-observed deployments and versions"
             )
 
-    # Parsing the checkpoint here is deliberately not required. Stage 2 treats
-    # an invalid historical timestamp as reconciliation-due so a successful
-    # fresh observation can replace it; Stage 3 only requires correlation with
-    # the exact raw canonical value it was planned against.
+    # Parsing checkpointAt is deliberately not required. Stage 2 treats an
+    # invalid historical timestamp string as reconciliation-due and preserves
+    # the exact non-empty string in checkpointAt for stale-plan correlation.
     _ = checkpoint
 
 
@@ -173,7 +171,7 @@ def _metadata_with_reconciliation_checkpoint(
         "metadataReconciliation.checkpointAt",
         script_id,
     )
-    current_checkpoint = _current_reconciliation_checkpoint(metadata, script_id)
+    current_checkpoint = _current_reconciliation_checkpoint(metadata)
     if current_checkpoint != planned_checkpoint:
         raise core.MaterializationPlanError(
             f"{script_id}: stale metadata reconciliation checkpoint {planned_checkpoint!r}; "
@@ -192,14 +190,10 @@ def _metadata_with_reconciliation_checkpoint(
 
     result = dict(metadata)
     state = result.get("reconciliationState")
-    if state is None:
-        state = {}
-    elif not isinstance(state, dict):
-        raise core.MaterializationPlanError(
-            f"{script_id}: metadata reconciliationState must be an object"
-        )
-    else:
-        state = dict(state)
+    # Keep valid namespace siblings, but deliberately replace malformed
+    # namespace values because Stage 2 normalized them to a missing checkpoint
+    # and this successful reconciliation is the self-healing path.
+    state = dict(state) if isinstance(state, dict) else {}
     state[RECONCILIATION_CHECKPOINT_FIELD] = observed_at
     result["reconciliationState"] = state
     return result
