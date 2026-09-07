@@ -125,7 +125,7 @@ class Stage1InventoryTests(unittest.TestCase):
             self.assertNotIn("deployments", metadata)
             self.assertFalse((project / ".clasp.json").exists())
 
-    def test_reconcile_new_project_creates_legacy_compatible_clasp(self):
+    def test_reconcile_new_project_creates_split_layout_clasp(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             snapshot = root / "snapshot.json"
@@ -134,8 +134,11 @@ class Stage1InventoryTests(unittest.TestCase):
                 encoding="utf-8",
             )
             self.assertEqual(1, reconciler.reconcile(snapshot, root=root))
-            clasp = json.loads((root / "projects" / "script-1" / ".clasp.json").read_text(encoding="utf-8"))
-            self.assertEqual({"scriptId": "script-1"}, clasp)
+            project = root / "projects" / "script-1"
+            clasp = json.loads((project / ".clasp.json").read_text(encoding="utf-8"))
+            self.assertEqual({"rootDir": "gas", "scriptId": "script-1"}, clasp)
+            self.assertTrue((project / "repository" / "metadata.json").is_file())
+            self.assertFalse((project / "metadata.json").exists())
 
     def test_public_index_preserves_fallback_and_deterministic_sort(self):
         with tempfile.TemporaryDirectory() as temporary:

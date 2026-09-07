@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -17,14 +18,26 @@ class ProjectRegistryTests(unittest.TestCase):
     def tearDown(self) -> None:
         self.temporary_directory.cleanup()
 
-    def create_project(self, script_id: str, metadata: dict | None = None) -> Path:
+    def create_project(
+        self,
+        script_id: str,
+        metadata: dict | None = None,
+        *,
+        split_metadata: bool = False,
+    ) -> Path:
         project_dir = self.root / "projects" / script_id
         project_dir.mkdir()
         (project_dir / ".clasp.json").write_text(
             json.dumps({"scriptId": script_id}), encoding="utf-8"
         )
         if metadata is not None:
-            (project_dir / "metadata.json").write_text(json.dumps(metadata), encoding="utf-8")
+            if split_metadata:
+                repository_dir = project_dir / "repository"
+                repository_dir.mkdir()
+                metadata_path = repository_dir / "metadata.json"
+            else:
+                metadata_path = project_dir / "metadata.json"
+            metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
         return project_dir
 
     def test_projects_path_uses_canonical_directory(self) -> None:
@@ -39,6 +52,16 @@ class ProjectRegistryTests(unittest.TestCase):
             ["a", "b"],
         )
 
+    @unittest.skipIf(os.name == "nt", "symlink creation may require Windows developer privileges")
+    def test_iter_project_directories_rejects_symlink_entry(self) -> None:
+        target = self.root / "outside-project"
+        target.mkdir()
+        (self.root / "projects" / "linked-project").symlink_to(
+            target, target_is_directory=True
+        )
+        with self.assertRaisesRegex(project_registry.ProjectRegistryError, "must not be a symlink"):
+            project_registry.iter_project_directories(self.root)
+
     def test_project_path_rejects_path_traversal(self) -> None:
         for unsafe in ("", ".", "..", "../outside", "nested/id", "nested\\id"):
             with self.subTest(unsafe=unsafe):
@@ -49,18 +72,127 @@ class ProjectRegistryTests(unittest.TestCase):
         project_dir = self.create_project("script-123")
         self.assertEqual(project_registry.get_script_id(project_dir), "script-123")
 
+    @unittest.skipIf(os.name == "nt", "symlink creation may require Windows developer privileges")
+    def test_load_clasp_rejects_symlinked_leaf(self) -> None:
+        project_dir = self.create_project("script-123")
+        clasp_path = project_dir / ".clasp.json"
+        target = self.root / "outside-clasp.json"
+        target.write_text(json.dumps({"scriptId": "script-123"}), encoding="utf-8")
+        clasp_path.unlink()
+        clasp_path.symlink_to(target)
+        with self.assertRaisesRegex(project_registry.ProjectRegistryError, "must not be a symlink"):
+            project_registry.load_clasp(project_dir)
+
+    def test_layout_paths_are_project_local(self) -> None:
+        project_dir = self.create_project("script-123")
+        self.assertEqual(
+            project_registry.project_repository_path(project_dir),
+            project_dir / "repository",
+        )
+        self.assertEqual(
+            project_registry.project_source_path(project_dir),
+            project_dir / "gas",
+        )
+        self.assertEqual(
+            project_registry.legacy_metadata_path(project_dir),
+            project_dir / "metadata.json",
+        )
+        self.assertEqual(
+            project_registry.split_metadata_path(project_dir),
+            project_dir / "repository" / "metadata.json",
+        )
+
     def test_load_metadata_can_allow_missing_for_new_stage_1_project(self) -> None:
         project_dir = self.create_project("script-123")
+        self.assertFalse(project_registry.metadata_exists(project_dir))
         self.assertEqual(project_registry.load_metadata(project_dir, allow_missing=True), {})
         with self.assertRaises(project_registry.ProjectRegistryError):
             project_registry.load_metadata(project_dir)
+
+    def test_load_metadata_reads_legacy_layout(self) -> None:
+        metadata = {"driveApi": {"name": "Legacy"}}
+        project_dir = self.create_project("script-123", metadata)
+        self.assertTrue(project_registry.metadata_exists(project_dir))
+        self.assertEqual(project_registry.metadata_path(project_dir), project_dir / "metadata.json")
+        self.assertEqual(project_registry.load_metadata(project_dir), metadata)
+
+    def test_load_metadata_reads_split_layout(self) -> None:
+        metadata = {"driveApi": {"name": "Split"}}
+        project_dir = self.create_project("script-123", metadata, split_metadata=True)
+        self.assertTrue(project_registry.metadata_exists(project_dir))
+        self.assertEqual(
+            project_registry.metadata_path(project_dir),
+            project_dir / "repository" / "metadata.json",
+        )
+        self.assertEqual(project_registry.load_metadata(project_dir), metadata)
+
+    @unittest.skipIf(os.name == "nt", "symlink creation may require Windows developer privileges")
+    def test_load_metadata_rejects_symlinked_split_leaf(self) -> None:
+        project_dir = self.create_project(
+            "script-123",
+            {"driveApi": {"name": "Split"}},
+            split_metadata=True,
+        )
+        metadata_path = project_dir / "repository" / "metadata.json"
+        target = self.root / "outside-metadata.json"
+        target.write_text(json.dumps({"outside": True}), encoding="utf-8")
+        metadata_path.unlink()
+        metadata_path.symlink_to(target)
+        with self.assertRaisesRegex(project_registry.ProjectRegistryError, "must not be a symlink"):
+            project_registry.load_metadata(project_dir)
+
+    @unittest.skipIf(os.name == "nt", "symlink creation may require Windows developer privileges")
+    def test_metadata_rejects_symlinked_repository_directory(self) -> None:
+        project_dir = self.create_project("script-123")
+        target = self.root / "outside-repository"
+        target.mkdir()
+        (target / "metadata.json").write_text(
+            json.dumps({"outside": True}), encoding="utf-8"
+        )
+        (project_dir / "repository").symlink_to(target, target_is_directory=True)
+        with self.assertRaisesRegex(project_registry.ProjectRegistryError, "must not be a symlink"):
+            project_registry.load_metadata(project_dir)
+
+    def test_metadata_rejects_legacy_and_split_files_together(self) -> None:
+        project_dir = self.create_project("script-123", {"layout": "legacy"})
+        repository_dir = project_dir / "repository"
+        repository_dir.mkdir()
+        (repository_dir / "metadata.json").write_text(
+            json.dumps({"layout": "split"}), encoding="utf-8"
+        )
+        with self.assertRaises(project_registry.ProjectRegistryError):
+            project_registry.metadata_path(project_dir)
+        with self.assertRaises(project_registry.ProjectRegistryError):
+            project_registry.metadata_exists(project_dir)
+        with self.assertRaises(project_registry.ProjectRegistryError):
+            project_registry.load_metadata(project_dir)
+        with self.assertRaises(project_registry.ProjectRegistryError):
+            project_registry.write_metadata(project_dir, {"new": "value"})
 
     def test_write_metadata_round_trip_is_utf8_json_object(self) -> None:
         project_dir = self.create_project("script-123")
         metadata = {"driveApi": {"name": "日本語"}, "appsScriptApi": {"updateTime": "t"}}
         project_registry.write_metadata(project_dir, metadata)
         self.assertEqual(project_registry.load_metadata(project_dir), metadata)
-        self.assertTrue((project_dir / "metadata.json").read_text(encoding="utf-8").endswith("\n"))
+        self.assertTrue(
+            (project_dir / "repository" / "metadata.json")
+            .read_text(encoding="utf-8")
+            .endswith("\n")
+        )
+        self.assertFalse((project_dir / "metadata.json").exists())
+
+    def test_write_metadata_preserves_split_layout(self) -> None:
+        project_dir = self.create_project(
+            "script-123",
+            {"driveApi": {"name": "Before"}},
+            split_metadata=True,
+        )
+        metadata = {"driveApi": {"name": "After"}}
+        project_registry.write_metadata(project_dir, metadata)
+        split_path = project_dir / "repository" / "metadata.json"
+        self.assertEqual(project_registry.load_metadata(project_dir), metadata)
+        self.assertTrue(split_path.read_text(encoding="utf-8").endswith("\n"))
+        self.assertFalse((project_dir / "metadata.json").exists())
 
     def test_load_metadata_rejects_non_object_json(self) -> None:
         project_dir = self.create_project("script-123")
