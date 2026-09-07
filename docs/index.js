@@ -265,9 +265,11 @@ function renderDetailShell(project) {
   body.appendChild(eyebrow);
 
   const title = document.createElement("h2");
+  title.id = "project-detail-heading";
   title.className = "h3 mb-3";
   title.textContent = project.name;
   body.appendChild(title);
+  elements.detail.setAttribute("aria-labelledby", title.id);
 
   body.appendChild(createMetadataLine(project));
 
@@ -374,11 +376,28 @@ function refreshSelectedStyles() {
   });
 }
 
+function surfaceDetail(options = {}) {
+  if (!options.scrollIntoView) {
+    return;
+  }
+  elements.detail.tabIndex = -1;
+  elements.detail.focus({ preventScroll: true });
+  elements.detail.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 function selectProject(projectId, options = {}) {
   const project = projects.find((item) => item.id === projectId);
   if (!project) {
     const body = document.createElement("div");
     body.className = "card-body p-4";
+
+    const title = document.createElement("h2");
+    title.id = "project-detail-heading";
+    title.className = "h3 mb-3";
+    title.textContent = "プロジェクトを表示できません";
+    body.appendChild(title);
+    elements.detail.setAttribute("aria-labelledby", title.id);
+
     const message = document.createElement("p");
     message.className = "text-danger mb-0";
     message.textContent = "指定されたプロジェクトは現在の公開一覧にありません。";
@@ -386,6 +405,7 @@ function selectProject(projectId, options = {}) {
     elements.detail.replaceChildren(body);
     selectedProjectId = null;
     refreshSelectedStyles();
+    surfaceDetail(options);
     return;
   }
 
@@ -397,10 +417,7 @@ function selectProject(projectId, options = {}) {
   const readmeElement = renderDetailShell(project);
   refreshSelectedStyles();
   loadReadme(project, readmeElement);
-
-  if (options.scrollIntoView) {
-    elements.detail.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+  surfaceDetail(options);
 }
 
 function handleProjectActivation(event) {
@@ -490,6 +507,8 @@ document.addEventListener("DOMContentLoaded", () => {
       message.textContent = "左の一覧からプロジェクトを選択してください。";
       body.appendChild(message);
       elements.detail.replaceChildren(body);
+      elements.detail.removeAttribute("aria-labelledby");
+      elements.detail.removeAttribute("tabindex");
     }
   });
 
