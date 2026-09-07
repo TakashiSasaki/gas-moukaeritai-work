@@ -68,6 +68,10 @@ class ProjectRegistryTests(unittest.TestCase):
             project_dir / "repository",
         )
         self.assertEqual(
+            project_registry.project_source_path(project_dir),
+            project_dir / "gas",
+        )
+        self.assertEqual(
             project_registry.legacy_metadata_path(project_dir),
             project_dir / "metadata.json",
         )
