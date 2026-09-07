@@ -29,10 +29,6 @@ layout_migration = load_module(
     "test_split_project_layout_migration_module",
     "automation/maintenance/migrate-project-layout.py",
 )
-stage1 = load_module(
-    "test_split_project_layout_stage1_module",
-    "automation/stage-1-inventory/reconcile-project-registry.py",
-)
 
 
 class SplitProjectLayoutMigrationTests(unittest.TestCase):
@@ -41,14 +37,6 @@ class SplitProjectLayoutMigrationTests(unittest.TestCase):
         root = Path(temporary.name)
         (root / "projects").mkdir()
         return temporary, root
-
-    def write_snapshot(self, root: Path, files: list[dict]) -> Path:
-        snapshot = root / "snapshot.json"
-        snapshot.write_text(
-            json.dumps({"complete": True, "files": files}),
-            encoding="utf-8",
-        )
-        return snapshot
 
     def make_legacy_project(self, root: Path, script_id: str = "script-1") -> Path:
         project = root / "projects" / script_id
@@ -66,47 +54,6 @@ class SplitProjectLayoutMigrationTests(unittest.TestCase):
         (project / "README.md").write_text("# Legacy\n", encoding="utf-8")
         return project
 
-    def test_stage1_new_project_uses_split_layout_without_empty_gas_directory(self) -> None:
-        temporary, root = self.make_root()
-        try:
-            snapshot = self.write_snapshot(
-                root,
-                [{"id": "script-1", "name": "New Project"}],
-            )
-            self.assertEqual(stage1.reconcile(snapshot, root), 1)
-            project = root / "projects" / "script-1"
-            self.assertFalse((project / "metadata.json").exists())
-            metadata = json.loads(
-                (project / "repository" / "metadata.json").read_text(encoding="utf-8")
-            )
-            self.assertEqual(metadata["driveApi"]["name"], "New Project")
-            clasp = json.loads((project / ".clasp.json").read_text(encoding="utf-8"))
-            self.assertEqual(clasp, {"scriptId": "script-1", "rootDir": "gas"})
-            self.assertFalse((project / "gas").exists())
-        finally:
-            temporary.cleanup()
-
-    def test_stage1_existing_legacy_project_stays_legacy_before_bulk_migration(self) -> None:
-        temporary, root = self.make_root()
-        try:
-            project = self.make_legacy_project(root)
-            before_clasp = (project / ".clasp.json").read_text(encoding="utf-8")
-            snapshot = self.write_snapshot(
-                root,
-                [{"id": "script-1", "name": "Updated Name"}],
-            )
-            self.assertEqual(stage1.reconcile(snapshot, root), 1)
-            self.assertTrue((project / "metadata.json").is_file())
-            self.assertFalse((project / "repository").exists())
-            self.assertEqual(
-                (project / ".clasp.json").read_text(encoding="utf-8"),
-                before_clasp,
-            )
-            metadata = json.loads((project / "metadata.json").read_text(encoding="utf-8"))
-            self.assertEqual(metadata["driveApi"]["name"], "Updated Name")
-        finally:
-            temporary.cleanup()
-
     def test_layout_migration_dry_run_is_read_only_and_apply_converges(self) -> None:
         temporary, root = self.make_root()
         try:
@@ -122,6 +69,7 @@ class SplitProjectLayoutMigrationTests(unittest.TestCase):
                 plan["sourceFiles"],
                 ["Code.js", "appsscript.json", "index.html"],
             )
+            self.assertEqual(plan["repositoryEntries"], [])
             for name, content in original.items():
                 self.assertEqual((project / name).read_bytes(), content)
 
@@ -137,6 +85,37 @@ class SplitProjectLayoutMigrationTests(unittest.TestCase):
             self.assertEqual(clasp["scriptId"], "script-1")
             self.assertEqual(clasp["rootDir"], "gas")
             self.assertFalse(layout_migration.plan_project(project)["changed"])
+        finally:
+            temporary.cleanup()
+
+    def test_layout_migration_moves_non_gas_assets_under_repository(self) -> None:
+        temporary, root = self.make_root()
+        try:
+            project = self.make_legacy_project(root)
+            (project / "image.png").write_bytes(b"png-bytes")
+            (project / "notes.txt").write_text("supplemental", encoding="utf-8")
+            assets = project / "assets"
+            assets.mkdir()
+            (assets / "icon.ico").write_bytes(b"ico-bytes")
+
+            plan = layout_migration.plan_project(project)
+            self.assertEqual(
+                plan["repositoryEntries"],
+                ["assets", "image.png", "notes.txt"],
+            )
+            layout_migration.apply_project(project)
+            self.assertEqual(
+                (project / "repository" / "image.png").read_bytes(),
+                b"png-bytes",
+            )
+            self.assertEqual(
+                (project / "repository" / "notes.txt").read_text(encoding="utf-8"),
+                "supplemental",
+            )
+            self.assertEqual(
+                (project / "repository" / "assets" / "icon.ico").read_bytes(),
+                b"ico-bytes",
+            )
         finally:
             temporary.cleanup()
 
@@ -157,29 +136,22 @@ class SplitProjectLayoutMigrationTests(unittest.TestCase):
         finally:
             temporary.cleanup()
 
-    def test_layout_migration_rejects_unclassified_root_file(self) -> None:
+    def test_layout_migration_rejects_repository_destination_conflict(self) -> None:
         temporary, root = self.make_root()
         try:
             project = self.make_legacy_project(root)
-            (project / "notes.txt").write_text("unknown ownership", encoding="utf-8")
-            with self.assertRaises(layout_migration.LayoutMigrationError):
-                layout_migration.plan_project(project)
-        finally:
-            temporary.cleanup()
-
-    def test_layout_migration_rejects_unclassified_root_directory(self) -> None:
-        temporary, root = self.make_root()
-        try:
-            project = self.make_legacy_project(root)
-            (project / "unexpected").mkdir()
+            (project / "image.png").write_bytes(b"root")
+            repository = project / "repository"
+            repository.mkdir()
+            (repository / "image.png").write_bytes(b"existing")
             with self.assertRaises(layout_migration.LayoutMigrationError):
                 layout_migration.plan_project(project)
         finally:
             temporary.cleanup()
 
     def test_current_repository_flat_layout_is_fully_classifiable(self) -> None:
-        # This is the pre-bulk-migration safety gate: every tracked project must
-        # be classifiable without guessing ownership before the tree is moved.
+        # Pre-bulk-migration safety gate: every tracked project must be
+        # classifiable using the GAS flat-file contract without path ambiguity.
         with redirect_stdout(io.StringIO()):
             affected = layout_migration.run(REPO_ROOT, apply=False)
         self.assertGreater(affected, 0)
