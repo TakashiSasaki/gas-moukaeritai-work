@@ -2,7 +2,7 @@
 
 This repository backs up and version-controls multiple Google Apps Script projects in one Git repository.
 
-各 Google Apps Script project は `projects/<SCRIPT_ID>/` に配置され、Script ID を directory name として使用します。
+各 Google Apps Script project は `projects/<SCRIPT_ID>/` に配置され、Script ID を directory name として使用します。各 project directory は Apps Script source (`gas/`) と repository-owned state (`repository/`) を分離します。
 
 ## Repository Model
 
@@ -10,7 +10,7 @@ The repository separates synchronization responsibilities explicitly:
 
 - `automation/`: synchronization implementation — **how** state is observed and synchronized.
 - `data/`: external observations — **what** was observed, including Drive inventory snapshots.
-- `projects/`: materialized Apps Script project source and metadata.
+- `projects/`: materialized Apps Script projects, with GAS/clasp source under `gas/` and repository-owned metadata/assets under `repository/`.
 - `docs/`: the public GitHub Pages projection, including generated `projects.json`.
 
 ## GitHub Actions Workflows
@@ -28,9 +28,9 @@ Workflow: `.github/workflows/stage-1-inventory.yml`
   2. `automation/stage-1-inventory/reconcile-project-registry.py`
   3. `automation/stage-1-inventory/generate-public-project-index.py`
   4. repository validation
-- **Outputs:** Drive snapshots under `data/inventory/drive-api/snapshots/`, `projects/<SCRIPT_ID>/` registry state, and `docs/projects.json`.
+- **Outputs:** Drive snapshots under `data/inventory/drive-api/snapshots/`, `projects/<SCRIPT_ID>/repository/metadata.json` registry state, and `docs/projects.json`.
 
-Stage 1 is the authority for Drive-derived project presence. `metadata.json` records this as `lifecycle.driveInventory`:
+Stage 1 is the authority for Drive-derived project presence. `repository/metadata.json` records this as `lifecycle.driveInventory`:
 
 - `present`: the project exists in the latest Drive inventory and participates in normal publication/synchronization.
 - `absent`: the project is missing from the latest Drive inventory. The canonical project directory and source history are retained, but the project is excluded from `docs/projects.json` and normal downstream synchronization. A later Drive observation can return it to `present`.
@@ -63,7 +63,7 @@ The shared Stage 2 Apps Script API client retries transient HTTP `429`, `500`, `
 
 Stage 1 and the Stage 2/3 workflow share a repository-writer concurrency group. This serializes their default-branch mutations so a Stage 2 plan and its Stage 3 application are not raced by another canonical project-state writer.
 
-Remote observation, successful source materialization, and deployment/version reconciliation are separate states. `appsScriptApi.updateTime` records observed Apps Script project state, `syncState.lastMaterializedAppsScriptUpdateTime` records the Apps Script source state successfully materialized, and `reconciliationState.lastDeploymentVersionReconciliationAt` records the last successfully finalized paired deployment/version observation. A failed Stage 2 inspection, failed source pull, or failed Stage 3 transaction must not advance the checkpoint it did not successfully complete. A `not-observed` deployment/version run never advances the reconciliation checkpoint.
+Remote observation, successful source materialization, and deployment/version reconciliation are separate states. `appsScriptApi.updateTime` records observed Apps Script project state, `syncState.lastMaterializedAppsScriptUpdateTime` records the Apps Script source state successfully materialized, and `reconciliationState.lastDeploymentVersionReconciliationAt` records the last successfully finalized paired deployment/version observation. These fields live in each project's `repository/metadata.json`. A failed Stage 2 inspection, failed source pull, or failed Stage 3 transaction must not advance the checkpoint it did not successfully complete. A `not-observed` deployment/version run never advances the reconciliation checkpoint.
 
 Stage 3 also rejects a plan if a concrete current Drive lifecycle or successful-materialization checkpoint no longer matches the state observed when Stage 2 built the plan. The reconciliation-aware Stage 3 entrypoint additionally verifies that a due reconciliation was planned against the same canonical reconciliation checkpoint before persisting the new one.
 
@@ -85,15 +85,26 @@ The comparison explicitly reports any file/deployment/version change observed wh
 
 Workflow: `.github/workflows/validate-automation.yml`
 
-Pull requests are checked with repository structural validation and unit tests under `automation/tests/` without requiring Google credentials.
+Pull requests are checked with repository structural validation and unit tests under `automation/tests/` without requiring Google credentials. The validator enforces the split project layout after the repository-wide cutover: canonical metadata must be `repository/metadata.json`, `.clasp.json.rootDir` must be `gas`, legacy root `metadata.json` is rejected, and project-root entries are limited to the split-layout control directories/files.
 
 ## Project State
 
-Each tracked project normally contains:
+Each tracked project uses the following target layout:
 
-- `.clasp.json` with its Script ID;
-- `metadata.json` with namespaced metadata such as `driveApi`, `appsScriptApi`, `lifecycle`, `syncState`, and `reconciliationState`;
-- Apps Script source files materialized by the synchronization pipeline.
+```text
+projects/<SCRIPT_ID>/
+├── .clasp.json              # scriptId plus rootDir: "gas"
+├── README.md                # optional human-facing repository summary
+├── gas/                     # Apps Script/clasp materialization only
+│   ├── appsscript.json
+│   ├── *.js
+│   └── *.html
+└── repository/              # repository-owned state and supplemental assets
+    ├── metadata.json
+    └── ...
+```
+
+`gas/` is the only clasp source root. `repository/metadata.json` is the canonical structured repository state and contains namespaced metadata such as `driveApi`, `appsScriptApi`, `lifecycle`, `syncState`, and `reconciliationState`. Repository-owned supplemental files that are not the optional project-root `README.md` belong under `repository/` rather than beside GAS source.
 
 The repository intentionally distinguishes four concepts:
 
@@ -102,4 +113,4 @@ The repository intentionally distinguishes four concepts:
 3. successful source materialization (`syncState.lastMaterializedAppsScriptUpdateTime`);
 4. successful paired deployment/version reconciliation (`reconciliationState.lastDeploymentVersionReconciliationAt`).
 
-Historical metadata/file migrations are explicit maintenance operations under `automation/maintenance/`; they are not part of recurring Stage 1 synchronization. The deployment/version reconciliation checkpoint does not require a historical migration: missing state simply makes the next active-project Stage 2 run reconciliation-due.
+Historical metadata/file migrations are explicit maintenance operations under `automation/maintenance/`; they are not part of recurring Stage 1 synchronization. `automation/maintenance/migrate-project-layout.py` is the explicit migration utility for the former flat layout. The deployment/version reconciliation checkpoint does not require a historical migration: missing state simply makes the next active-project Stage 2 run reconciliation-due.
