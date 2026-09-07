@@ -24,6 +24,7 @@ if str(REPO_ROOT) not in sys.path:
 from automation.shared.project_registry import (
     iter_project_directories,
     load_metadata,
+    metadata_exists,
     project_path,
     write_metadata,
 )
@@ -93,8 +94,7 @@ def reconcile(snapshot: Path, root: Path | None = None) -> int:
 
         directory = project_path(script_id, base)
         directory.mkdir(parents=True, exist_ok=True)
-        metadata_path = directory / "metadata.json"
-        is_new_metadata = not metadata_path.exists()
+        is_new_metadata = not metadata_exists(directory)
         metadata = load_metadata(directory, allow_missing=True)
 
         drive_api = metadata.get("driveApi")
