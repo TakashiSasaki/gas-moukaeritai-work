@@ -119,18 +119,13 @@ def _validate_casefolded_destinations(
     *,
     label: str,
 ) -> None:
-    """Reject destination names that would collide on case-insensitive filesystems."""
+    """Reject case-insensitive collisions introduced by this migration."""
     existing: dict[str, str] = {}
     if destination_dir.exists():
         for entry in sorted(destination_dir.iterdir(), key=lambda item: item.name):
-            folded = entry.name.casefold()
-            previous = existing.get(folded)
-            if previous is not None and previous != entry.name:
-                raise LayoutMigrationError(
-                    f"{project_dir.name}: {label}/ already contains a case-insensitive "
-                    f"name collision: {previous} vs {entry.name}"
-                )
-            existing[folded] = entry.name
+            # Existing case-only siblings predate this migration. Preserve them here;
+            # this guard prevents the migration from adding another colliding name.
+            existing.setdefault(entry.name.casefold(), entry.name)
 
     planned: dict[str, str] = {}
     for name in incoming_names:
