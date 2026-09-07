@@ -97,7 +97,10 @@ class Stage2SourceFastPathTests(unittest.TestCase):
                     "filesObserved": 0,
                     "filesNotObserved": 1,
                     "deploymentsObserved": 1,
+                    "deploymentsNotObserved": 0,
                     "versionsObserved": 1,
+                    "versionsNotObserved": 0,
+                    "metadataReconciliationsDue": 1,
                 },
                 plan["observationStats"],
             )
@@ -201,7 +204,10 @@ class Stage2SourceFastPathTests(unittest.TestCase):
                     "filesObserved": 0,
                     "filesNotObserved": 0,
                     "deploymentsObserved": 0,
+                    "deploymentsNotObserved": 0,
                     "versionsObserved": 0,
+                    "versionsNotObserved": 0,
+                    "metadataReconciliationsDue": 0,
                 },
                 plan["observationStats"],
             )
