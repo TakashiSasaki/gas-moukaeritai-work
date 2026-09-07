@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import importlib.util
+import io
 import json
 import sys
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from pathlib import Path
 from types import ModuleType
 
@@ -174,6 +176,13 @@ class SplitProjectLayoutMigrationTests(unittest.TestCase):
                 layout_migration.plan_project(project)
         finally:
             temporary.cleanup()
+
+    def test_current_repository_flat_layout_is_fully_classifiable(self) -> None:
+        # This is the pre-bulk-migration safety gate: every tracked project must
+        # be classifiable without guessing ownership before the tree is moved.
+        with redirect_stdout(io.StringIO()):
+            affected = layout_migration.run(REPO_ROOT, apply=False)
+        self.assertGreater(affected, 0)
 
 
 if __name__ == "__main__":
