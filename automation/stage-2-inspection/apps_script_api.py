@@ -52,7 +52,10 @@ def _retry_after_delay(
         return None
 
     if value.isascii() and value.isdigit():
-        seconds = int(value)
+        try:
+            seconds = int(value)
+        except ValueError:
+            return None
         if seconds >= _MAX_RETRY_DELAY_SECONDS:
             return _MAX_RETRY_DELAY_SECONDS
         return _bounded_delay(float(seconds))
