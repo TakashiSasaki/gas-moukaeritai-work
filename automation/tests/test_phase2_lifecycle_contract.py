@@ -34,14 +34,23 @@ index_module = load_script(
 
 def write_project(root: Path, script_id: str, metadata: dict) -> Path:
     directory = root / "projects" / script_id
-    directory.mkdir(parents=True)
+    source_dir = directory / "gas"
+    repository_dir = directory / "repository"
+    source_dir.mkdir(parents=True)
+    repository_dir.mkdir()
     (directory / ".clasp.json").write_text(
-        json.dumps({"scriptId": script_id}), encoding="utf-8"
+        json.dumps({"scriptId": script_id, "rootDir": "gas"}), encoding="utf-8"
     )
-    (directory / "metadata.json").write_text(
+    (repository_dir / "metadata.json").write_text(
         json.dumps(metadata), encoding="utf-8"
     )
     return directory
+
+
+def read_metadata(project: Path) -> dict:
+    return json.loads(
+        (project / "repository" / "metadata.json").read_text(encoding="utf-8")
+    )
 
 
 def write_snapshot(
@@ -70,12 +79,12 @@ class Phase2LifecycleContractTests(unittest.TestCase):
                 "script-a",
                 {"driveApi": {"id": "script-a", "name": "Alpha"}},
             )
-            source = project / "Code.js"
+            source = project / "gas" / "Code.js"
             source.write_text("function alpha() {}\n", encoding="utf-8")
 
             empty_snapshot = write_snapshot(root, [])
             reconcile_module.reconcile(empty_snapshot, root)
-            metadata = json.loads((project / "metadata.json").read_text(encoding="utf-8"))
+            metadata = read_metadata(project)
             self.assertEqual(metadata["lifecycle"]["driveInventory"], "absent")
             self.assertTrue(source.exists())
 
@@ -85,7 +94,7 @@ class Phase2LifecycleContractTests(unittest.TestCase):
                 "20260903-010000.json",
             )
             reconcile_module.reconcile(present_snapshot, root)
-            metadata = json.loads((project / "metadata.json").read_text(encoding="utf-8"))
+            metadata = read_metadata(project)
             self.assertEqual(metadata["lifecycle"]["driveInventory"], "present")
             self.assertTrue(source.exists())
 
@@ -102,7 +111,7 @@ class Phase2LifecycleContractTests(unittest.TestCase):
             )
             incomplete = write_snapshot(root, [], complete=False)
             reconcile_module.reconcile(incomplete, root)
-            metadata = json.loads((project / "metadata.json").read_text(encoding="utf-8"))
+            metadata = read_metadata(project)
             self.assertEqual(metadata["lifecycle"]["driveInventory"], "present")
 
     def test_incomplete_snapshot_can_still_confirm_presence(self):
@@ -122,7 +131,7 @@ class Phase2LifecycleContractTests(unittest.TestCase):
                 complete=False,
             )
             reconcile_module.reconcile(incomplete, root)
-            metadata = json.loads((project / "metadata.json").read_text(encoding="utf-8"))
+            metadata = read_metadata(project)
             self.assertEqual(metadata["lifecycle"]["driveInventory"], "present")
             self.assertEqual(metadata["driveApi"]["name"], "Alpha")
 
@@ -147,7 +156,13 @@ class Phase2LifecycleContractTests(unittest.TestCase):
             )
             self.assertEqual(
                 index_module.build_index(root),
-                [{"id": "active", "name": "Active"}],
+                [{
+                    "id": "active",
+                    "name": "Active",
+                    "createdAt": None,
+                    "updatedAt": None,
+                    "hasReadme": False,
+                }],
             )
 
 

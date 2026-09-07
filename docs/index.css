@@ -1,49 +1,224 @@
-body {
-    font-family: sans-serif;
-    margin: 0;
-    background-color: #f4f4f4;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    padding: 20px;
-    box-sizing: border-box;
+:root {
+    --surface: #ffffff;
+    --surface-muted: #f5f7f6;
+    --border: #dfe5e2;
+    --text: #1f2a26;
+    --text-muted: #66736d;
+    --accent: #1e6b52;
+    --accent-soft: #e8f3ee;
 }
 
-.container {
+html {
+    background: var(--surface-muted);
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--surface-muted);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.site-header {
+    background: rgba(255, 255, 255, 0.96);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 1030;
+    backdrop-filter: blur(10px);
+}
+
+.site-title {
+    color: var(--text);
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.hero {
+    background: linear-gradient(135deg, #174f3e, #1e6b52 60%, #35846a);
+    color: white;
+}
+
+.hero .lead {
+    max-width: 52rem;
+    color: rgba(255, 255, 255, 0.86);
+}
+
+.project-total {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.8rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 0.8rem;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+#project-total-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.project-total-label {
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.explorer-toolbar,
+.project-detail,
+.recent-project {
+    background: var(--surface);
+}
+
+.recent-project {
+    color: inherit;
+    transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.recent-project:hover,
+.recent-project:focus-visible {
+    transform: translateY(-2px);
+}
+
+.recent-project.is-selected {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.project-list {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.project-row {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 0.9rem 1rem;
+    background: var(--surface);
+    color: inherit;
+    text-align: left;
+    transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.project-row:hover,
+.project-row:focus-visible {
+    border-color: #91aa9f;
+    box-shadow: 0 0.15rem 0.55rem rgba(31, 42, 38, 0.08);
+}
+
+.project-row.is-selected {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.project-row-title {
+    display: block;
+    font-weight: 650;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.project-meta {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
-    gap: 20px;
+    gap: 0.35rem 1rem;
+    margin-top: 0.45rem;
+    color: var(--text-muted);
+    font-size: 0.82rem;
 }
 
-.card {
-    background-color: white;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    padding: 20px;
-    width: 300px;
+.project-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.6rem;
+}
+
+.project-detail {
+    top: 5.5rem;
+    max-height: calc(100vh - 7rem);
+    overflow: auto;
+}
+
+.readme-content {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.readme-content img {
+    max-width: 100%;
+    height: auto;
+}
+
+.readme-content pre {
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 0.9rem;
+    border-radius: 0.5rem;
+    background: #f6f8fa;
+}
+
+.readme-content code {
+    overflow-wrap: normal;
+}
+
+.readme-content table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.markdown-fallback {
+    white-space: pre-wrap;
+}
+
+.empty-state {
+    padding: 1.5rem;
+    border: 1px dashed var(--border);
+    border-radius: 0.75rem;
+    color: var(--text-muted);
     text-align: center;
 }
 
-.card h2 {
-    margin-top: 0;
-    font-size: 1.5em;
-    color: #333;
+.footer {
+    margin-top: 3rem;
+    padding: 2rem 0;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    text-align: center;
 }
 
-.button {
-    display: inline-block;
-    background-color: #007bff;
-    color: white;
-    padding: 10px 20px;
-    text-decoration: none;
-    border-radius: 5px;
-    font-weight: bold;
-    transition: background-color 0.3s ease;
+.footer a {
+    color: var(--accent);
 }
 
-.button:hover {
-    background-color: #0056b3;
+@media (max-width: 991.98px) {
+    .site-header {
+        position: static;
+    }
+
+    .project-detail {
+        position: static !important;
+        max-height: none;
+        overflow: visible;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .hero .display-5 {
+        font-size: 2rem;
+    }
+
+    .project-total {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .site-header nav {
+        width: 100%;
+    }
 }

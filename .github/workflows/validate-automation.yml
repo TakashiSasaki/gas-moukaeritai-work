@@ -31,5 +31,14 @@ jobs:
       - name: Validate automation and repository state
         run: python .github/scripts/validate-automation.py
 
+      - name: Verify canonical public project index
+        run: |
+          python automation/stage-1-inventory/generate-public-project-index.py
+          echo '--- BEGIN GENERATED PROJECT INDEX BASE64 ---'
+          base64 -w0 docs/projects.json
+          echo
+          echo '--- END GENERATED PROJECT INDEX BASE64 ---'
+          git diff --exit-code -- docs/projects.json
+
       - name: Run automation unit tests
         run: PYTHONPATH=. python -m unittest discover -s automation/tests -p 'test_*.py'

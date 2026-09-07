@@ -7,6 +7,7 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
@@ -24,28 +25,47 @@ def _is_present(metadata: dict[str, object]) -> bool:
     return True
 
 
-def build_index(root: Path | None = None) -> list[dict[str, str]]:
+def _string_or_none(value: object) -> str | None:
+    return value if isinstance(value, str) and value else None
+
+
+def build_index(root: Path | None = None) -> list[dict[str, Any]]:
     base = root if root is not None else REPO_ROOT
-    entries: list[dict[str, str]] = []
+    entries: list[dict[str, Any]] = []
     for directory in iter_project_directories(base):
         metadata = load_metadata(directory, allow_missing=True)
         if not _is_present(metadata):
             continue
-        name = None
+
         drive_api = metadata.get("driveApi")
-        if isinstance(drive_api, dict):
-            name = drive_api.get("name")
         apps_script_api = metadata.get("appsScriptApi")
+
+        name = None
+        created_at = None
+        updated_at = None
+        if isinstance(drive_api, dict):
+            name = _string_or_none(drive_api.get("name"))
+            created_at = _string_or_none(drive_api.get("createdTime"))
+            updated_at = _string_or_none(drive_api.get("modifiedTime"))
+
         if not name and isinstance(apps_script_api, dict):
-            name = apps_script_api.get("title")
-        if not isinstance(name, str) or not name:
+            name = _string_or_none(apps_script_api.get("title"))
+        if not name:
             continue
-        entries.append({"id": directory.name, "name": name})
+
+        entries.append({
+            "id": directory.name,
+            "name": name,
+            "createdAt": created_at,
+            "updatedAt": updated_at,
+            "hasReadme": (directory / "README.md").is_file(),
+        })
+
     entries.sort(key=lambda item: (item["name"].lower(), item["id"]))
     return entries
 
 
-def write_index(entries: list[dict[str, str]], output: Path) -> None:
+def write_index(entries: list[dict[str, Any]], output: Path) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = output.with_name(output.name + ".tmp")
     temporary.write_text(

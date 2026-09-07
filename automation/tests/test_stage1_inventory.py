@@ -140,31 +140,94 @@ class Stage1InventoryTests(unittest.TestCase):
             self.assertTrue((project / "repository" / "metadata.json").is_file())
             self.assertFalse((project / "metadata.json").exists())
 
-    def test_public_index_preserves_fallback_and_deterministic_sort(self):
+    def test_public_index_preserves_drive_authority_fallback_and_deterministic_sort(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             values = {
-                "b": {"driveApi": {"name": "Zulu"}},
-                "c": {"appsScriptApi": {"title": "alpha"}},
-                "a": {"appsScriptApi": {"title": "alpha"}},
+                "b": {
+                    "driveApi": {
+                        "name": "Zulu",
+                        "createdTime": "2025-01-01T00:00:00Z",
+                        "modifiedTime": "2025-02-01T00:00:00Z",
+                    },
+                },
+                "c": {
+                    "driveApi": {
+                        "createdTime": "2024-01-01T00:00:00Z",
+                        "modifiedTime": "2024-02-01T00:00:00Z",
+                    },
+                    "appsScriptApi": {"title": "alpha"},
+                },
+                "a": {
+                    "appsScriptApi": {
+                        "title": "alpha",
+                        "createTime": "must-not-be-published",
+                        "updateTime": "must-not-be-published",
+                    },
+                },
             }
             for script_id, metadata in values.items():
                 project = root / "projects" / script_id
-                project.mkdir(parents=True)
-                (project / "metadata.json").write_text(json.dumps(metadata), encoding="utf-8")
+                repository = project / "repository"
+                repository.mkdir(parents=True)
+                (repository / "metadata.json").write_text(
+                    json.dumps(metadata), encoding="utf-8"
+                )
+            (root / "projects" / "a" / "README.md").write_text(
+                "# alpha\n", encoding="utf-8"
+            )
             self.assertEqual(
                 [
-                    {"id": "a", "name": "alpha"},
-                    {"id": "c", "name": "alpha"},
-                    {"id": "b", "name": "Zulu"},
+                    {
+                        "id": "a",
+                        "name": "alpha",
+                        "createdAt": None,
+                        "updatedAt": None,
+                        "hasReadme": True,
+                    },
+                    {
+                        "id": "c",
+                        "name": "alpha",
+                        "createdAt": "2024-01-01T00:00:00Z",
+                        "updatedAt": "2024-02-01T00:00:00Z",
+                        "hasReadme": False,
+                    },
+                    {
+                        "id": "b",
+                        "name": "Zulu",
+                        "createdAt": "2025-01-01T00:00:00Z",
+                        "updatedAt": "2025-02-01T00:00:00Z",
+                        "hasReadme": False,
+                    },
                 ],
                 generator.build_index(root),
             )
 
+    def test_public_index_excludes_drive_absent_projects_in_split_layout(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for script_id, lifecycle in (("present", "present"), ("absent", "absent")):
+                repository = root / "projects" / script_id / "repository"
+                repository.mkdir(parents=True)
+                (repository / "metadata.json").write_text(
+                    json.dumps({
+                        "driveApi": {"name": script_id.title()},
+                        "lifecycle": {"driveInventory": lifecycle},
+                    }),
+                    encoding="utf-8",
+                )
+            self.assertEqual(
+                ["present"],
+                [entry["id"] for entry in generator.build_index(root)],
+            )
+
     def test_current_public_index_membership_is_preserved(self):
         expected = json.loads((REPO_ROOT / "docs" / "projects.json").read_text(encoding="utf-8"))
-        expected = sorted(expected, key=lambda item: (item["name"].lower(), item["id"]))
-        self.assertEqual(expected, generator.build_index(REPO_ROOT))
+        expected_membership = sorted((item["id"], item["name"]) for item in expected)
+        actual_membership = sorted(
+            (item["id"], item["name"]) for item in generator.build_index(REPO_ROOT)
+        )
+        self.assertEqual(expected_membership, actual_membership)
 
     def test_legacy_migration_is_explicit_and_dry_run_is_read_only(self):
         with tempfile.TemporaryDirectory() as temporary:
