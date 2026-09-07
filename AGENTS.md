@@ -4,8 +4,8 @@ This repository stores and synchronizes many Google Apps Script projects in one 
 
 ## General Guidelines
 
-1. Treat `projects/<SCRIPT_ID>/` as the only canonical location for materialized Apps Script project state.
-2. Keep original Apps Script filenames whenever possible, including `Code.js`, `appsscript.json`, HTML files, and project-specific names.
+1. Treat `projects/<SCRIPT_ID>/` as the only canonical location for a materialized Apps Script project. Within it, keep Apps Script/clasp materialization under `gas/` and repository-owned state under `repository/`.
+2. Keep original Apps Script filenames whenever possible, including `Code.js`, `appsscript.json`, HTML files, and project-specific names. Their canonical materialized location is `projects/<SCRIPT_ID>/gas/`.
 3. Use the existing automation under `automation/` rather than inventing parallel synchronization scripts.
 4. Do not manually edit generated inventory snapshots or `docs/projects.json` when the canonical automation can produce them.
 5. Keep `README.md`, this file, and `docs/AGENTS.md` aligned with repository-level workflow changes.
@@ -20,17 +20,21 @@ This repository stores and synchronizes many Google Apps Script projects in one 
   - `shared/`: repository, OAuth, and validation primitives shared by stages.
   - `maintenance/`: explicit historical migrations; these are not part of steady-state synchronization.
 - `data/`: **what was externally observed**. Drive inventory snapshots live under `data/inventory/drive-api/snapshots/`.
-- `projects/`: materialized Apps Script project state under `projects/<SCRIPT_ID>/`.
+- `projects/`: materialized project directories under `projects/<SCRIPT_ID>/`.
+  - `.clasp.json`: project binding; after split-layout cutover `rootDir` must be `gas`.
+  - `gas/`: GAS/clasp materialized source only.
+  - `repository/`: repository-owned structured state and supplemental assets; canonical metadata is `repository/metadata.json`.
+  - `README.md`: optional project-root human-facing landing page.
 - `docs/`: GitHub Pages/public projection. Local rules live in `docs/AGENTS.md`.
 - `.github/workflows/`: orchestration only; business logic belongs under `automation/`.
 
-There is no supported repository-root project fallback. Do not recreate one.
+There is no supported repository-root project fallback. Do not recreate one. The former flat per-project layout is historical state only; steady-state code and validation must use the split layout.
 
 The canonical state authorities are intentionally distinct:
 
-- Stage 1 / Drive owns `driveApi` and `lifecycle.driveInventory`.
+- Stage 1 / Drive owns `driveApi` and `lifecycle.driveInventory` in `repository/metadata.json`.
 - Stage 2 owns read-only Apps Script remote observation and deterministic materialization planning.
-- Stage 3 owns repository source materialization and finalization of Stage 2 observations.
+- Stage 3 owns repository source materialization under `gas/` and finalization of Stage 2 observations in `repository/metadata.json`.
 - `syncState.lastMaterializedAppsScriptUpdateTime` records the Apps Script source state that was **successfully materialized**, not merely observed.
 - `reconciliationState.lastDeploymentVersionReconciliationAt` records the last successfully finalized paired deployment/version observation and is independent of the source-materialization checkpoint.
 
@@ -61,6 +65,8 @@ Stage 1 owns Drive observation, `driveApi` reconciliation, and Drive-derived lif
 - `absent`: not observed in the latest Drive inventory. Preserve the entire `projects/<SCRIPT_ID>/` directory and source history, omit the project from the public index and normal downstream synchronization, and allow a later observation to return it to `present`.
 
 Do not treat `absent` as authorization to delete source or the project directory.
+
+New Stage 1 projects must be created directly in the split layout: initialize `.clasp.json` with the project `scriptId` and `rootDir: "gas"`, and write canonical metadata to `repository/metadata.json`. Stage 1 must not create a new root-level `metadata.json`.
 
 ### Stage 2 — inspection/planning
 
@@ -95,20 +101,21 @@ The same workflow passes the Stage 2 plan to `automation/stage-3-materialization
 
 1. reject malformed or stale plans before any source mutation when possible, and roll back a required source transaction if a reconciliation-finalization check fails after the pull has begun;
 2. use `clasp pull` as the only steady-state clasp command;
-3. treat pull, stale tracked-source cleanup, post-pull validation, structured metadata persistence, and checkpoint advancement as one per-project transaction when a pull is required;
-4. restore the complete pre-transaction project directory if any part of a required transaction fails;
-5. preserve unrelated metadata namespaces, especially Stage 1-owned `driveApi` and `lifecycle`;
-6. advance `syncState.lastMaterializedAppsScriptUpdateTime` only to the pre-pull Apps Script `updateTime` carried by the Stage 2 plan and only after successful source materialization;
-7. leave the source checkpoint unchanged when no correlated pre-pull `updateTime` exists, so the next inspection remains fail-safe;
-8. replace canonical `files`, `deployments`, and `versions` metadata only when the corresponding Stage 2 family is `observed`; preserve the current canonical family unchanged when it is `not-observed`;
-9. require an observed `files` family before any source materialization so pull validation and stale-source cleanup never operate from stale metadata;
-10. advance `reconciliationState.lastDeploymentVersionReconciliationAt` only when the Stage 2 plan records a due reconciliation with both deployments and versions observed and the Stage 3 metadata finalization succeeds;
-11. never advance the deployment/version reconciliation checkpoint on a `not-observed` run, on a partial/invalid pair, on an Apps Script API failure, or on a Stage 3 failure;
-12. verify that the current canonical deployment/version reconciliation checkpoint still equals the exact value against which Stage 2 planned a due reconciliation before replacing it;
-13. refresh structured Apps Script/file/deployment/version observations for unchanged active projects without invoking clasp when those families were observed;
-14. leave Drive-absent projects untouched;
-15. honor a safe project-local `.clasp.json.rootDir` and reject source/root paths that can escape the canonical project directory;
-16. reject a plan when a concrete current Drive lifecycle or successful-materialization checkpoint no longer matches the Stage 2 plan.
+3. materialize Apps Script source only under the safe project-local `gas/` root selected by `.clasp.json.rootDir`;
+4. treat pull, stale tracked-source cleanup, post-pull validation, structured metadata persistence, and checkpoint advancement as one per-project transaction when a pull is required;
+5. restore the complete pre-transaction project directory if any part of a required transaction fails;
+6. preserve unrelated metadata namespaces, especially Stage 1-owned `driveApi` and `lifecycle`;
+7. advance `syncState.lastMaterializedAppsScriptUpdateTime` only to the pre-pull Apps Script `updateTime` carried by the Stage 2 plan and only after successful source materialization;
+8. leave the source checkpoint unchanged when no correlated pre-pull `updateTime` exists, so the next inspection remains fail-safe;
+9. replace canonical `files`, `deployments`, and `versions` metadata only when the corresponding Stage 2 family is `observed`; preserve the current canonical family unchanged when it is `not-observed`;
+10. require an observed `files` family before any source materialization so pull validation and stale-source cleanup never operate from stale metadata;
+11. advance `reconciliationState.lastDeploymentVersionReconciliationAt` only when the Stage 2 plan records a due reconciliation with both deployments and versions observed and the Stage 3 metadata finalization succeeds;
+12. never advance the deployment/version reconciliation checkpoint on a `not-observed` run, on a partial/invalid pair, on an Apps Script API failure, or on a Stage 3 failure;
+13. verify that the current canonical deployment/version reconciliation checkpoint still equals the exact value against which Stage 2 planned a due reconciliation before replacing it;
+14. refresh structured Apps Script/file/deployment/version observations for unchanged active projects without invoking clasp when those families were observed;
+15. leave Drive-absent projects untouched;
+16. honor a safe project-local `.clasp.json.rootDir` and reject source/root paths that can escape the canonical project directory;
+17. reject a plan when a concrete current Drive lifecycle or successful-materialization checkpoint no longer matches the Stage 2 plan.
 
 Node.js and clasp installation are conditional on `materializationRequired=true`. Do **not** skip Stage 3 when no pull is required: it may still need to finalize structured observations or a due deployment/version reconciliation for unchanged active projects.
 
@@ -119,29 +126,36 @@ After Stage 3 succeeds, run repository validation before committing. The synchro
 ## Project Directory Rules
 
 1. Do not rename or flatten `projects/<SCRIPT_ID>/`.
-2. Keep `.clasp.json` in each tracked project directory with the correct non-empty `scriptId`.
-3. Preserve unrelated namespaces in `metadata.json`. In particular, Stage 1 and downstream stages must not overwrite each other's authoritative metadata blocks.
-4. Treat standalone `deployments.json`, `versions.json`, and their old text variants as legacy state, not as canonical outputs.
-5. Be careful with case-insensitive filename collisions because this repository is actively used on Windows.
-6. Never advance `syncState.lastMaterializedAppsScriptUpdateTime` for a failed or unattempted source synchronization.
-7. Never advance `reconciliationState.lastDeploymentVersionReconciliationAt` unless both deployment and version observations were freshly obtained in the same due Stage 2 reconciliation and successfully finalized by Stage 3.
-8. Treat canonical project-directory symlinks and source/root paths that escape the canonical project directory as invalid synchronization targets.
+2. Keep `.clasp.json` at the project root with the correct non-empty `scriptId` and `rootDir: "gas"`.
+3. Keep Apps Script/clasp materialized source under `gas/`. Do not place `.js`, `.html`, or `appsscript.json` back at the project root.
+4. Keep canonical structured repository state in `repository/metadata.json`. Root-level `metadata.json` is legacy and is rejected after the split-layout cutover.
+5. Preserve unrelated namespaces in `repository/metadata.json`. In particular, Stage 1 and downstream stages must not overwrite each other's authoritative metadata blocks.
+6. Repository-owned supplemental files and directories belong under `repository/`, except for the optional project-root `README.md`.
+7. Treat standalone `deployments.json`, `versions.json`, and their old text variants as legacy state, not as canonical outputs.
+8. Keep project-root entries limited to `.clasp.json`, optional `README.md`, `gas/`, and `repository/`; use the explicit maintenance migration rather than manually mixing flat and split layouts.
+9. Be careful with case-insensitive filename collisions because this repository is actively used on Windows.
+10. Never advance `syncState.lastMaterializedAppsScriptUpdateTime` for a failed or unattempted source synchronization.
+11. Never advance `reconciliationState.lastDeploymentVersionReconciliationAt` unless both deployment and version observations were freshly obtained in the same due Stage 2 reconciliation and successfully finalized by Stage 3.
+12. Treat canonical project-directory symlinks and source/root paths that escape the canonical project directory as invalid synchronization targets.
 
 ## Project Creation and Deletion
 
-- Creation: create only under `projects/<SCRIPT_ID>/` and initialize `.clasp.json` consistently with that Script ID.
+- Creation: create only under `projects/<SCRIPT_ID>/`, initialize `.clasp.json` with that Script ID and `rootDir: "gas"`, and create canonical repository metadata under `repository/metadata.json`.
 - Lifecycle absence: a project missing from Drive is marked `lifecycle.driveInventory = "absent"`; retain its canonical directory and source history.
 - Deletion: deleting a project directory is a separate destructive operation. Confirm the intended project before removing `projects/<SCRIPT_ID>/` and related generated references.
-- Historical schema/file migration belongs in explicit maintenance tooling, not in recurring Stage 1 logic. The deployment/version reconciliation checkpoint does not need a historical migration: missing checkpoint state intentionally makes the first active-project reconciliation due.
+- Historical schema/file migration belongs in explicit maintenance tooling, not in recurring Stage 1 logic. The flat-to-split project migration is implemented by `automation/maintenance/migrate-project-layout.py`; steady-state code must not recreate the legacy layout. The deployment/version reconciliation checkpoint does not need a historical migration: missing checkpoint state intentionally makes the first active-project reconciliation due.
 
 ## Docs and Web UI
 
 1. `docs/` is production public content for `https://gas.moukaeritai.work/`.
 2. `docs/projects.json` is generated by `automation/stage-1-inventory/generate-public-project-index.py`; it contains only projects eligible under the current Drive lifecycle and must not be hand-maintained during normal synchronization.
 3. Read `docs/AGENTS.md` before changing public site behavior or assets.
+4. Project-root `README.md` remains outside `gas/` and `repository/` because the public site may fetch it directly as a human-facing summary.
 
 ## Validation
 
 Run `.github/scripts/validate-automation.py` and the unit tests under `automation/tests/` for repository automation changes. The validation workflow is `.github/workflows/validate-automation.yml`.
+
+Repository validation is strict about the post-cutover project layout: each project must have `repository/metadata.json`, `.clasp.json.rootDir == "gas"`, no legacy root `metadata.json`, and no unexpected project-root entries outside the split-layout allowlist.
 
 When changing synchronization semantics, preserve the separation between external observation, materialized project state, successful source-materialization checkpoints, deployment/version reconciliation checkpoints, and public projection unless the repository architecture is intentionally being redesigned.
