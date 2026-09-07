@@ -11,6 +11,7 @@ import argparse
 import importlib.util
 import json
 import sys
+from datetime import datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath
 from types import ModuleType
 from typing import Any
@@ -22,6 +23,9 @@ if str(REPO_ROOT) not in sys.path:
 from automation.shared.google_oauth import GoogleOAuthError, acquire_access_token
 from automation.shared.project_registry import iter_project_directories, load_metadata
 from automation.shared.project_validation import CaseInsensitiveNameConflict, validate_files
+
+RECONCILIATION_INTERVAL = timedelta(hours=24)
+RECONCILIATION_CHECKPOINT_FIELD = "lastDeploymentVersionReconciliationAt"
 
 
 def _load_sibling(name: str, filename: str) -> ModuleType:
@@ -53,6 +57,17 @@ def materialized_update_time(metadata: dict[str, Any]) -> str | None:
         return str(apps_script["updateTime"])
     legacy = metadata.get("lastUpdated")
     return str(legacy) if legacy else None
+
+
+def deployment_version_reconciliation_checkpoint(metadata: dict[str, Any]) -> str | None:
+    """Return the canonical deployment/version reconciliation checkpoint, if usable."""
+    state = metadata.get("reconciliationState")
+    if not isinstance(state, dict):
+        return None
+    checkpoint = state.get(RECONCILIATION_CHECKPOINT_FIELD)
+    if isinstance(checkpoint, str) and checkpoint:
+        return checkpoint
+    return None
 
 
 def drive_lifecycle(metadata: dict[str, Any]) -> str:
@@ -133,22 +148,67 @@ def _canonical_files_reusable(metadata: dict[str, Any], script_id: str) -> bool:
     return True
 
 
+def _normalize_now(now: datetime | None) -> datetime:
+    current = now if now is not None else datetime.now(timezone.utc)
+    if current.tzinfo is None or current.utcoffset() is None:
+        raise ValueError("Stage 2 now must be timezone-aware")
+    return current.astimezone(timezone.utc)
+
+
+def _format_utc_timestamp(value: datetime) -> str:
+    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _parse_timestamp(value: str) -> datetime | None:
+    text = value[:-1] + "+00:00" if value.endswith("Z") else value
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        return None
+    return parsed.astimezone(timezone.utc)
+
+
+def _metadata_reconciliation_decision(
+    checkpoint: str | None,
+    now: datetime,
+) -> tuple[bool, str]:
+    if not checkpoint:
+        return True, "no-reconciliation-checkpoint"
+    parsed = _parse_timestamp(checkpoint)
+    if parsed is None:
+        return True, "invalid-reconciliation-checkpoint"
+    age = now - parsed
+    if age.total_seconds() < 0:
+        return True, "reconciliation-checkpoint-in-future"
+    if age >= RECONCILIATION_INTERVAL:
+        return True, "reconciliation-age-at-least-24h"
+    return False, "reconciliation-age-under-24h"
+
+
 def build_plan(
     root: Path | str | None,
     access_token: str,
     *,
     api: Any = None,
+    now: datetime | None = None,
 ) -> dict[str, Any]:
     """Inspect every eligible canonical project and return a deterministic plan."""
     api = api or apps_script_api
     base = Path(root).resolve() if root is not None else REPO_ROOT
+    current_time = _normalize_now(now)
+    current_time_text = _format_utc_timestamp(current_time)
     projects: list[dict[str, Any]] = []
     stats = {
         "activeProjects": 0,
         "filesObserved": 0,
         "filesNotObserved": 0,
         "deploymentsObserved": 0,
+        "deploymentsNotObserved": 0,
         "versionsObserved": 0,
+        "versionsNotObserved": 0,
+        "metadataReconciliationsDue": 0,
     }
 
     for project_dir in iter_project_directories(base):
@@ -158,6 +218,7 @@ def build_plan(
         metadata = load_metadata(project_dir, allow_missing=True)
         lifecycle = drive_lifecycle(metadata)
         checkpoint = materialized_update_time(metadata)
+        reconciliation_checkpoint = deployment_version_reconciliation_checkpoint(metadata)
 
         if lifecycle == "absent":
             projects.append({
@@ -171,6 +232,12 @@ def build_plan(
                     "checkpointAppsScriptUpdateTime": checkpoint,
                     "observedAppsScriptUpdateTime": None,
                 },
+                "metadataReconciliation": {
+                    "due": False,
+                    "reason": "drive-inventory-absent",
+                    "checkpointAt": reconciliation_checkpoint,
+                    "observedAt": None,
+                },
             })
             continue
 
@@ -180,13 +247,17 @@ def build_plan(
         if isinstance(remote_project.get("updateTime"), str) and remote_project["updateTime"]:
             remote_update_time = remote_project["updateTime"]
         required, reason = _materialization_decision(checkpoint, remote_update_time)
+        reconciliation_due, reconciliation_reason = _metadata_reconciliation_decision(
+            reconciliation_checkpoint,
+            current_time,
+        )
 
         observation: dict[str, Any] = {
             "appsScriptApi": remote_project,
             "observationState": {
                 "files": "not-observed",
-                "deployments": "observed",
-                "versions": "observed",
+                "deployments": "not-observed",
+                "versions": "not-observed",
             },
         }
         if required or not _canonical_files_reusable(metadata, script_id):
@@ -198,12 +269,24 @@ def build_plan(
         else:
             stats["filesNotObserved"] += 1
 
-        deployments = _sort_deployments(api.list_deployments(script_id, access_token))
-        versions = _sort_versions(api.list_versions(script_id, access_token))
-        observation["deployments"] = deployments
-        observation["versions"] = versions
-        stats["deploymentsObserved"] += 1
-        stats["versionsObserved"] += 1
+        reconciliation_observed_at = None
+        if reconciliation_due:
+            # The two metadata families form one reconciliation unit. A failure
+            # in either request aborts Stage 2, so no plan reaches Stage 3 with
+            # only one family freshly reconciled.
+            deployments = _sort_deployments(api.list_deployments(script_id, access_token))
+            versions = _sort_versions(api.list_versions(script_id, access_token))
+            observation["observationState"]["deployments"] = "observed"
+            observation["observationState"]["versions"] = "observed"
+            observation["deployments"] = deployments
+            observation["versions"] = versions
+            reconciliation_observed_at = current_time_text
+            stats["deploymentsObserved"] += 1
+            stats["versionsObserved"] += 1
+            stats["metadataReconciliationsDue"] += 1
+        else:
+            stats["deploymentsNotObserved"] += 1
+            stats["versionsNotObserved"] += 1
 
         projects.append({
             "scriptId": script_id,
@@ -215,6 +298,12 @@ def build_plan(
                 "reason": reason,
                 "checkpointAppsScriptUpdateTime": checkpoint,
                 "observedAppsScriptUpdateTime": remote_update_time,
+            },
+            "metadataReconciliation": {
+                "due": reconciliation_due,
+                "reason": reconciliation_reason,
+                "checkpointAt": reconciliation_checkpoint,
+                "observedAt": reconciliation_observed_at,
             },
         })
 
@@ -243,7 +332,7 @@ def main() -> int:
     try:
         access_token = acquire_access_token()
         plan = build_plan(None, access_token)
-    except (GoogleOAuthError, apps_script_api.AppsScriptApiError, CaseInsensitiveNameConflict) as exc:
+    except (GoogleOAuthError, apps_script_api.AppsScriptApiError, CaseInsensitiveNameConflict, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
     write_json(plan, args.output)
@@ -251,8 +340,10 @@ def main() -> int:
     stats = plan["observationStats"]
     print(
         f"Stage 2 inspection selected {selected}/{len(plan['projects'])} project(s) for materialization; "
-        f"file metadata observed for {stats['filesObserved']} active project(s) and skipped for "
-        f"{stats['filesNotObserved']}."
+        f"files observed/skipped={stats['filesObserved']}/{stats['filesNotObserved']}; "
+        f"deployment/version reconciliations due={stats['metadataReconciliationsDue']}; "
+        f"deployments observed/skipped={stats['deploymentsObserved']}/{stats['deploymentsNotObserved']}; "
+        f"versions observed/skipped={stats['versionsObserved']}/{stats['versionsNotObserved']}."
     )
     return 0
 

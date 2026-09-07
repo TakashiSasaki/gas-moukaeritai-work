@@ -29,7 +29,7 @@ class ThreeStageWorkflowTests(unittest.TestCase):
     def test_stage2_plan_flows_directly_into_stage3(self):
         workflow = STAGE23.read_text(encoding="utf-8")
         stage2 = "automation/stage-2-inspection/plan-materialization.py"
-        stage3 = "automation/stage-3-materialization/materialize.py"
+        stage3 = "automation/stage-3-materialization/run-materialization.py"
         self.assertIn(stage2, workflow)
         self.assertIn(stage3, workflow)
         self.assertLess(workflow.index(stage2), workflow.index(stage3))
