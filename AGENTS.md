@@ -65,14 +65,17 @@ Do not treat `absent` as authorization to delete source or the project directory
 
 `.github/workflows/stage-2-3-sync.yml` is dispatched manually or after successful Stage 1 completion. Stage 2 runs `automation/stage-2-inspection/plan-materialization.py` and must:
 
-1. use the Google Apps Script API directly for project metadata, file metadata, deployments, and versions;
+1. use the Google Apps Script API directly; observe project metadata for every active project, observe deployments and versions on every active-project inspection, and observe file metadata whenever source materialization is required or canonical file metadata is not safely reusable;
 2. skip projects whose Drive lifecycle is `absent`;
 3. emit a deterministic JSON materialization plan;
 4. distinguish each `files`, `deployments`, and `versions` family as `observed` or `not-observed` in the plan; a `not-observed` family must not carry a stale payload that could be mistaken for a fresh observation;
-5. remain read-only with respect to `projects/<SCRIPT_ID>/`;
-6. fail closed when required Apps Script API observations cannot be obtained;
-7. retry only transient Apps Script API HTTP `429`, `500`, `502`, `503`, and `504` responses through the shared request layer with a finite attempt budget and bounded delay; retry exhaustion remains a Stage 2 failure;
-8. never invoke clasp or parse human-readable clasp output.
+5. use the source fast path only when `Project.updateTime` exactly matches the successful-materialization checkpoint **and** current canonical `files` metadata is structurally reusable; otherwise refresh file metadata fail-safe;
+6. never use `Project.updateTime` alone to suppress deployment/version observation: the diagnostic evidence contains a real counterexample where those families changed while the project timestamp did not;
+7. keep request-reduction decisions observable through deterministic plan statistics/logging rather than making silent skips;
+8. remain read-only with respect to `projects/<SCRIPT_ID>/`;
+9. fail closed when required Apps Script API observations cannot be obtained;
+10. retry only transient Apps Script API HTTP `429`, `500`, `502`, `503`, and `504` responses through the shared request layer with a finite attempt budget and bounded delay; retry exhaustion remains a Stage 2 failure;
+11. never invoke clasp or parse human-readable clasp output.
 
 A valid HTTP `Retry-After` value may select the retry delay, but it must remain bounded. Without a usable `Retry-After`, use bounded exponential backoff with jitter. Ordinary client/auth/permission/not-found failures remain prompt failures rather than being hidden behind retries.
 
