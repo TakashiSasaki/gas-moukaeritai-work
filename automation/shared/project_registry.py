@@ -39,9 +39,18 @@ def iter_project_directories(root: Path | str | None = None) -> tuple[Path, ...]
     base = projects_path(root)
     if not base.exists():
         return ()
+    if base.is_symlink():
+        raise ProjectRegistryError(f"projects path must not be a symlink: {base}")
     if not base.is_dir():
         raise ProjectRegistryError(f"projects path is not a directory: {base}")
-    return tuple(sorted((path for path in base.iterdir() if path.is_dir()), key=lambda path: path.name))
+
+    directories: list[Path] = []
+    for path in base.iterdir():
+        if path.is_symlink():
+            raise ProjectRegistryError(f"project entry must not be a symlink: {path}")
+        if path.is_dir():
+            directories.append(path)
+    return tuple(sorted(directories, key=lambda path: path.name))
 
 
 def _validate_script_id(script_id: str) -> str:
@@ -77,6 +86,11 @@ def split_metadata_path(project_dir: Path | str) -> Path:
     return project_repository_path(project_dir) / _METADATA_FILENAME
 
 
+def _reject_symlink(path: Path, label: str) -> None:
+    if path.is_symlink():
+        raise ProjectRegistryError(f"{label} must not be a symlink: {path}")
+
+
 def metadata_path(project_dir: Path | str) -> Path:
     """Resolve the single canonical metadata path during layout migration.
 
@@ -87,8 +101,17 @@ def metadata_path(project_dir: Path | str) -> Path:
     newly discovered project is created directly in the target structure. Having
     both metadata files is ambiguous and rejected fail-closed.
     """
-    legacy = legacy_metadata_path(project_dir)
-    split = split_metadata_path(project_dir)
+    directory = Path(project_dir)
+    _reject_symlink(directory, "project directory")
+
+    legacy = legacy_metadata_path(directory)
+    split = split_metadata_path(directory)
+    repository_dir = project_repository_path(directory)
+
+    _reject_symlink(repository_dir, "split repository directory")
+    _reject_symlink(legacy, "legacy metadata file")
+    _reject_symlink(split, "split metadata file")
+
     legacy_exists = legacy.exists()
     split_exists = split.exists()
     if legacy_exists and split_exists:
@@ -100,7 +123,6 @@ def metadata_path(project_dir: Path | str) -> Path:
     if legacy_exists:
         return legacy
 
-    repository_dir = project_repository_path(project_dir)
     if repository_dir.exists() and not repository_dir.is_dir():
         raise ProjectRegistryError(
             f"split repository path is not a directory: {repository_dir}"
@@ -114,6 +136,7 @@ def metadata_exists(project_dir: Path | str) -> bool:
 
 
 def _load_json_object(path: Path, *, allow_missing: bool = False) -> dict[str, Any]:
+    _reject_symlink(path, "repository JSON file")
     if allow_missing and not path.exists():
         return {}
     try:
@@ -129,7 +152,11 @@ def _load_json_object(path: Path, *, allow_missing: bool = False) -> dict[str, A
 
 def load_clasp(project_dir: Path | str) -> dict[str, Any]:
     """Read and validate a project's `.clasp.json` object."""
-    return _load_json_object(Path(project_dir) / ".clasp.json")
+    directory = Path(project_dir)
+    _reject_symlink(directory, "project directory")
+    clasp_path = directory / ".clasp.json"
+    _reject_symlink(clasp_path, ".clasp.json")
+    return _load_json_object(clasp_path)
 
 
 def get_script_id(project_dir: Path | str) -> str:
@@ -145,7 +172,8 @@ def load_metadata(project_dir: Path | str, *, allow_missing: bool = False) -> di
     During the split-layout migration this accepts either legacy
     `metadata.json` or split `repository/metadata.json`, but never both.
     `allow_missing=True` is intended for Stage 1 while materializing a newly
-    discovered project. It does not suppress malformed or ambiguous metadata.
+    discovered project. It does not suppress malformed, ambiguous, or symlinked
+    metadata state.
     """
     return _load_json_object(metadata_path(project_dir), allow_missing=allow_missing)
 
@@ -158,6 +186,7 @@ def write_metadata(project_dir: Path | str, metadata: dict[str, Any]) -> None:
     yet are written directly to `repository/metadata.json`.
     """
     directory = Path(project_dir)
+    _reject_symlink(directory, "project directory")
     if not directory.is_dir():
         raise ProjectRegistryError(f"project directory does not exist: {directory}")
     if not isinstance(metadata, dict):
@@ -168,6 +197,8 @@ def write_metadata(project_dir: Path | str, metadata: dict[str, Any]) -> None:
     temporary_name: str | None = None
     try:
         destination.parent.mkdir(parents=True, exist_ok=True)
+        _reject_symlink(destination.parent, "metadata parent directory")
+        _reject_symlink(destination, "metadata file")
         with tempfile.NamedTemporaryFile(
             mode="w",
             encoding="utf-8",
@@ -179,10 +210,12 @@ def write_metadata(project_dir: Path | str, metadata: dict[str, Any]) -> None:
             temporary.write(serialized)
             temporary_name = temporary.name
         os.replace(temporary_name, destination)
-    except OSError as exc:
+    except (OSError, ProjectRegistryError) as exc:
         if temporary_name is not None:
             try:
                 Path(temporary_name).unlink(missing_ok=True)
             except OSError:
                 pass
+        if isinstance(exc, ProjectRegistryError):
+            raise
         raise ProjectRegistryError(f"cannot write metadata to {destination}: {exc}") from exc
