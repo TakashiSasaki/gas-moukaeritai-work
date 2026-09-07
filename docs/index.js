@@ -359,6 +359,9 @@ function updateProjectUrl(projectId, replace = false) {
   } else {
     url.searchParams.delete("project");
   }
+  if (!replace && url.href === window.location.href) {
+    return;
+  }
   const method = replace ? "replaceState" : "pushState";
   history[method]({ project: projectId }, "", url);
 }
