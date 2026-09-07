@@ -36,7 +36,15 @@ def _git(*args: str) -> str:
 
 def head_entries() -> dict[str, tuple[str, str, str]]:
     entries: dict[str, tuple[str, str, str]] = {}
-    output = _git("ls-tree", "-r", "--full-tree", "HEAD", "projects")
+    output = _git(
+        "-c",
+        "core.quotePath=false",
+        "ls-tree",
+        "-r",
+        "--full-tree",
+        "HEAD",
+        "projects",
+    )
     for line in output.splitlines():
         metadata, path = line.split("\t", 1)
         mode, object_type, sha = metadata.split(" ", 2)
