@@ -14,11 +14,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        chunk: [0, 1, 2, 3, 4, 5, 6, 7]
+        chunk: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
     steps:
       - name: Checkout pull request
         uses: actions/checkout@v4
       - name: Apply layout migration in disposable checkout
         run: python automation/maintenance/migrate-project-layout.py --apply >/dev/null
       - name: Emit Git tree manifest chunk
-        run: python automation/maintenance/emit-layout-tree-manifest.py --chunk "${{ matrix.chunk }}" --chunks 8
+        run: python automation/maintenance/emit-layout-tree-manifest.py --chunk "${{ matrix.chunk }}" --chunks 16
