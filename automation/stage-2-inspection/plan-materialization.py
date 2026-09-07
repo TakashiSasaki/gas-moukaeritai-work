@@ -11,7 +11,7 @@ import argparse
 import importlib.util
 import json
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from types import ModuleType
 from typing import Any
 
@@ -106,6 +106,33 @@ def _materialization_decision(
     return True, "remote-update-time-changed"
 
 
+def _canonical_files_reusable(metadata: dict[str, Any], script_id: str) -> bool:
+    """Return whether existing file metadata is safe to preserve on the fast path."""
+    files = metadata.get("files")
+    if (
+        not isinstance(files, list)
+        or not files
+        or any(not isinstance(item, dict) for item in files)
+    ):
+        return False
+    for item in files:
+        name = item.get("name")
+        if not isinstance(name, str) or not name or "\\" in name:
+            return False
+        relative = PurePosixPath(name)
+        if relative.is_absolute() or not relative.parts or any(
+            part in {"", ".", ".."} for part in relative.parts
+        ):
+            return False
+        if item.get("type") not in {"SERVER_JS", "HTML", "JSON"}:
+            return False
+    try:
+        validate_files(files, script_id)
+    except CaseInsensitiveNameConflict:
+        return False
+    return True
+
+
 def build_plan(
     root: Path | str | None,
     access_token: str,
@@ -116,6 +143,13 @@ def build_plan(
     api = api or apps_script_api
     base = Path(root).resolve() if root is not None else REPO_ROOT
     projects: list[dict[str, Any]] = []
+    stats = {
+        "activeProjects": 0,
+        "filesObserved": 0,
+        "filesNotObserved": 0,
+        "deploymentsObserved": 0,
+        "versionsObserved": 0,
+    }
 
     for project_dir in iter_project_directories(base):
         # The canonical directory name is the registry key. Stage 2 inspection
@@ -140,32 +174,42 @@ def build_plan(
             })
             continue
 
+        stats["activeProjects"] += 1
         remote_project = api.get_project(script_id, access_token)
-        files = _sort_files(api.get_project_files_metadata(script_id, access_token))
-        validate_files(files, script_id)
-        deployments = _sort_deployments(api.list_deployments(script_id, access_token))
-        versions = _sort_versions(api.list_versions(script_id, access_token))
-
         remote_update_time = None
         if isinstance(remote_project.get("updateTime"), str) and remote_project["updateTime"]:
             remote_update_time = remote_project["updateTime"]
         required, reason = _materialization_decision(checkpoint, remote_update_time)
 
+        observation: dict[str, Any] = {
+            "appsScriptApi": remote_project,
+            "observationState": {
+                "files": "not-observed",
+                "deployments": "observed",
+                "versions": "observed",
+            },
+        }
+        if required or not _canonical_files_reusable(metadata, script_id):
+            files = _sort_files(api.get_project_files_metadata(script_id, access_token))
+            validate_files(files, script_id)
+            observation["observationState"]["files"] = "observed"
+            observation["files"] = files
+            stats["filesObserved"] += 1
+        else:
+            stats["filesNotObserved"] += 1
+
+        deployments = _sort_deployments(api.list_deployments(script_id, access_token))
+        versions = _sort_versions(api.list_versions(script_id, access_token))
+        observation["deployments"] = deployments
+        observation["versions"] = versions
+        stats["deploymentsObserved"] += 1
+        stats["versionsObserved"] += 1
+
         projects.append({
             "scriptId": script_id,
             "path": project_dir.relative_to(base).as_posix(),
             "lifecycle": lifecycle,
-            "observation": {
-                "appsScriptApi": remote_project,
-                "observationState": {
-                    "files": "observed",
-                    "deployments": "observed",
-                    "versions": "observed",
-                },
-                "files": files,
-                "deployments": deployments,
-                "versions": versions,
-            },
+            "observation": observation,
             "materialization": {
                 "required": required,
                 "reason": reason,
@@ -179,6 +223,7 @@ def build_plan(
         "materializationRequired": any(
             project["materialization"]["required"] for project in projects
         ),
+        "observationStats": stats,
         "projects": projects,
     }
 
@@ -203,7 +248,12 @@ def main() -> int:
         return 1
     write_json(plan, args.output)
     selected = sum(1 for project in plan["projects"] if project["materialization"]["required"])
-    print(f"Stage 2 inspection selected {selected}/{len(plan['projects'])} project(s) for materialization.")
+    stats = plan["observationStats"]
+    print(
+        f"Stage 2 inspection selected {selected}/{len(plan['projects'])} project(s) for materialization; "
+        f"file metadata observed for {stats['filesObserved']} active project(s) and skipped for "
+        f"{stats['filesNotObserved']}."
+    )
     return 0
 
 
