@@ -31,7 +31,8 @@ The canonical state authorities are intentionally distinct:
 - Stage 1 / Drive owns `driveApi` and `lifecycle.driveInventory`.
 - Stage 2 owns read-only Apps Script remote observation and deterministic materialization planning.
 - Stage 3 owns repository source materialization and finalization of Stage 2 observations.
-- `syncState.lastMaterializedAppsScriptUpdateTime` records the Apps Script state that was **successfully materialized**, not merely observed.
+- `syncState.lastMaterializedAppsScriptUpdateTime` records the Apps Script source state that was **successfully materialized**, not merely observed.
+- `reconciliationState.lastDeploymentVersionReconciliationAt` records the last successfully finalized paired deployment/version observation and is independent of the source-materialization checkpoint.
 
 Never infer successful synchronization solely from a freshly observed remote timestamp.
 
@@ -65,43 +66,51 @@ Do not treat `absent` as authorization to delete source or the project directory
 
 `.github/workflows/stage-2-3-sync.yml` is dispatched manually or after successful Stage 1 completion. Stage 2 runs `automation/stage-2-inspection/plan-materialization.py` and must:
 
-1. use the Google Apps Script API directly; observe project metadata for every active project, observe deployments and versions on every active-project inspection, and observe file metadata whenever source materialization is required or canonical file metadata is not safely reusable;
+1. use the Google Apps Script API directly; observe project metadata for every active project, observe file metadata whenever source materialization is required or canonical file metadata is not safely reusable, and reconcile deployments plus versions as one paired observation unit only when the dedicated reconciliation checkpoint is due;
 2. skip projects whose Drive lifecycle is `absent`;
 3. emit a deterministic JSON materialization plan;
 4. distinguish each `files`, `deployments`, and `versions` family as `observed` or `not-observed` in the plan; a `not-observed` family must not carry a stale payload that could be mistaken for a fresh observation;
 5. use the source fast path only when `Project.updateTime` exactly matches the successful-materialization checkpoint **and** current canonical `files` metadata is structurally reusable; otherwise refresh file metadata fail-safe;
-6. never use `Project.updateTime` alone to suppress deployment/version observation: the diagnostic evidence contains a real counterexample where those families changed while the project timestamp did not;
-7. keep request-reduction decisions observable through deterministic plan statistics/logging rather than making silent skips;
-8. remain read-only with respect to `projects/<SCRIPT_ID>/`;
-9. fail closed when required Apps Script API observations cannot be obtained;
-10. retry only transient Apps Script API HTTP `429`, `500`, `502`, `503`, and `504` responses through the shared request layer with a finite attempt budget and bounded delay; retry exhaustion remains a Stage 2 failure;
-11. never invoke clasp or parse human-readable clasp output.
+6. keep deployment/version reconciliation completely independent from `Project.updateTime`; the diagnostic evidence contains a real counterexample where those families changed while the project timestamp did not;
+7. treat missing deployment/version checkpoint state as due, age below 24 hours as not due, and age at or above 24 hours as due; invalid or future-dated checkpoint timestamps must fail safe to due rather than suppress observation;
+8. when deployment/version reconciliation is due, obtain both `deployments.list` and `versions.list` successfully before emitting either family as a completed reconciliation; a failure in either request aborts Stage 2 and cannot advance the checkpoint;
+9. inject or otherwise centralize the Stage 2 current time so reconciliation-boundary tests remain deterministic; carry the correlated successful observation time in the ephemeral plan rather than recomputing it later in Stage 3;
+10. keep request-reduction decisions observable through deterministic plan statistics/logging, including observed/not-observed counts and reconciliation-due counts, rather than making silent skips;
+11. remain read-only with respect to `projects/<SCRIPT_ID>/`;
+12. fail closed when required Apps Script API observations cannot be obtained;
+13. retry only transient Apps Script API HTTP `429`, `500`, `502`, `503`, and `504` responses through the shared request layer with a finite attempt budget and bounded delay; retry exhaustion remains a Stage 2 failure;
+14. never invoke clasp or parse human-readable clasp output.
+
+Source freshness remains three-hourly through the Stage 1 → Stage 2/3 cadence. Deployment/version metadata uses bounded staleness: under healthy scheduled operation it is reconciled when the successful reconciliation checkpoint reaches 24 hours, and it may intentionally remain stale inside that window. A healthy unchanged, non-due project should normally require only `projects.get` from the Apps Script API.
 
 A valid HTTP `Retry-After` value may select the retry delay, but it must remain bounded. Without a usable `Retry-After`, use bounded exponential backoff with jitter. Ordinary client/auth/permission/not-found failures remain prompt failures rather than being hidden behind retries.
 
-The Stage 2 plan is an ephemeral run artifact in `$RUNNER_TEMP`; it is not canonical repository state and must not be committed.
+The Stage 2 plan is an ephemeral run artifact in `$RUNNER_TEMP`; it is not canonical repository state and must not be committed. Its `metadataReconciliation` data is correlated run state for Stage 3 finalization, not a second canonical authority.
 
 `automation/stage-2-inspection/diagnose-change-signals.py` is an experimental observer, not part of the recurring Stage 2 plan. It may capture project/file/deployment/version snapshots and compare them across manual runs to test whether `Project.updateTime` predicts downstream changes. A downstream change observed with an unchanged `Project.updateTime` is a counterexample to using that timestamp alone as an invalidation signal. The absence of such a counterexample in a finite experiment must not be promoted to an undocumented Google API guarantee.
 
 ### Stage 3 — materialization/finalization
 
-The same workflow passes the Stage 2 plan directly to `automation/stage-3-materialization/materialize.py`. Stage 3 must:
+The same workflow passes the Stage 2 plan to `automation/stage-3-materialization/run-materialization.py`. That entrypoint validates and finalizes deployment/version reconciliation state while delegating the established source transaction and partial-observation semantics to `materialize.py`. Stage 3 must:
 
-1. reject malformed or stale plans before any source mutation;
+1. reject malformed or stale plans before any source mutation when possible, and roll back a required source transaction if a reconciliation-finalization check fails after the pull has begun;
 2. use `clasp pull` as the only steady-state clasp command;
 3. treat pull, stale tracked-source cleanup, post-pull validation, structured metadata persistence, and checkpoint advancement as one per-project transaction when a pull is required;
 4. restore the complete pre-transaction project directory if any part of a required transaction fails;
 5. preserve unrelated metadata namespaces, especially Stage 1-owned `driveApi` and `lifecycle`;
 6. advance `syncState.lastMaterializedAppsScriptUpdateTime` only to the pre-pull Apps Script `updateTime` carried by the Stage 2 plan and only after successful source materialization;
-7. leave the checkpoint unchanged when no correlated pre-pull `updateTime` exists, so the next inspection remains fail-safe;
+7. leave the source checkpoint unchanged when no correlated pre-pull `updateTime` exists, so the next inspection remains fail-safe;
 8. replace canonical `files`, `deployments`, and `versions` metadata only when the corresponding Stage 2 family is `observed`; preserve the current canonical family unchanged when it is `not-observed`;
 9. require an observed `files` family before any source materialization so pull validation and stale-source cleanup never operate from stale metadata;
-10. refresh structured Apps Script/file/deployment/version observations for unchanged active projects without invoking clasp when those families were observed;
-11. leave Drive-absent projects untouched;
-12. honor a safe project-local `.clasp.json.rootDir` and reject source/root paths that can escape the canonical project directory;
-13. reject a plan when a concrete current Drive lifecycle or successful-materialization checkpoint no longer matches the Stage 2 plan.
+10. advance `reconciliationState.lastDeploymentVersionReconciliationAt` only when the Stage 2 plan records a due reconciliation with both deployments and versions observed and the Stage 3 metadata finalization succeeds;
+11. never advance the deployment/version reconciliation checkpoint on a `not-observed` run, on a partial/invalid pair, on an Apps Script API failure, or on a Stage 3 failure;
+12. verify that the current canonical deployment/version reconciliation checkpoint still equals the exact value against which Stage 2 planned a due reconciliation before replacing it;
+13. refresh structured Apps Script/file/deployment/version observations for unchanged active projects without invoking clasp when those families were observed;
+14. leave Drive-absent projects untouched;
+15. honor a safe project-local `.clasp.json.rootDir` and reject source/root paths that can escape the canonical project directory;
+16. reject a plan when a concrete current Drive lifecycle or successful-materialization checkpoint no longer matches the Stage 2 plan.
 
-Node.js and clasp installation are conditional on `materializationRequired=true`. Do **not** skip Stage 3 when no pull is required: it may still need to finalize structured observations for unchanged active projects.
+Node.js and clasp installation are conditional on `materializationRequired=true`. Do **not** skip Stage 3 when no pull is required: it may still need to finalize structured observations or a due deployment/version reconciliation for unchanged active projects.
 
 If Stage 3 fails, the workflow must not commit partial project state. A retry must start again from Stage 2 and build a new plan; do not reuse a plan from a failed or partially applied run.
 
@@ -115,14 +124,15 @@ After Stage 3 succeeds, run repository validation before committing. The synchro
 4. Treat standalone `deployments.json`, `versions.json`, and their old text variants as legacy state, not as canonical outputs.
 5. Be careful with case-insensitive filename collisions because this repository is actively used on Windows.
 6. Never advance `syncState.lastMaterializedAppsScriptUpdateTime` for a failed or unattempted source synchronization.
-7. Treat canonical project-directory symlinks and source/root paths that escape the canonical project directory as invalid synchronization targets.
+7. Never advance `reconciliationState.lastDeploymentVersionReconciliationAt` unless both deployment and version observations were freshly obtained in the same due Stage 2 reconciliation and successfully finalized by Stage 3.
+8. Treat canonical project-directory symlinks and source/root paths that escape the canonical project directory as invalid synchronization targets.
 
 ## Project Creation and Deletion
 
 - Creation: create only under `projects/<SCRIPT_ID>/` and initialize `.clasp.json` consistently with that Script ID.
 - Lifecycle absence: a project missing from Drive is marked `lifecycle.driveInventory = "absent"`; retain its canonical directory and source history.
 - Deletion: deleting a project directory is a separate destructive operation. Confirm the intended project before removing `projects/<SCRIPT_ID>/` and related generated references.
-- Historical schema/file migration belongs in explicit maintenance tooling, not in recurring Stage 1 logic.
+- Historical schema/file migration belongs in explicit maintenance tooling, not in recurring Stage 1 logic. The deployment/version reconciliation checkpoint does not need a historical migration: missing checkpoint state intentionally makes the first active-project reconciliation due.
 
 ## Docs and Web UI
 
@@ -134,4 +144,4 @@ After Stage 3 succeeds, run repository validation before committing. The synchro
 
 Run `.github/scripts/validate-automation.py` and the unit tests under `automation/tests/` for repository automation changes. The validation workflow is `.github/workflows/validate-automation.yml`.
 
-When changing synchronization semantics, preserve the separation between external observation, materialized project state, successful-materialization checkpoints, and public projection unless the repository architecture is intentionally being redesigned.
+When changing synchronization semantics, preserve the separation between external observation, materialized project state, successful source-materialization checkpoints, deployment/version reconciliation checkpoints, and public projection unless the repository architecture is intentionally being redesigned.
