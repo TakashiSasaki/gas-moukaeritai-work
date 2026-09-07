@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import io
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -133,6 +134,55 @@ class SplitProjectLayoutMigrationTests(unittest.TestCase):
             )
             self.assertEqual(metadata["deployments"], deployments)
             self.assertFalse((project / "deployments.json").exists())
+        finally:
+            temporary.cleanup()
+
+    @unittest.skipIf(os.name == "nt", "symlink creation may require Windows developer privileges")
+    def test_layout_migration_rejects_excluded_root_symlinks_before_reads(self) -> None:
+        for name, content in (
+            ("deployments.json", "[]\n"),
+            ("versions.json", "[]\n"),
+            ("README.md", "# outside\n"),
+        ):
+            with self.subTest(name=name):
+                temporary, root = self.make_root()
+                try:
+                    project = self.make_legacy_project(root)
+                    outside = root / f"outside-{name}"
+                    outside.write_text(content, encoding="utf-8")
+                    link = project / name
+                    if link.exists():
+                        link.unlink()
+                    link.symlink_to(outside)
+                    original_metadata = (project / "metadata.json").read_bytes()
+
+                    with self.assertRaisesRegex(
+                        layout_migration.LayoutMigrationError,
+                        "project tree contains a symlink",
+                    ):
+                        layout_migration.plan_project(project)
+
+                    self.assertEqual((project / "metadata.json").read_bytes(), original_metadata)
+                    self.assertEqual(outside.read_text(encoding="utf-8"), content)
+                finally:
+                    temporary.cleanup()
+
+    @unittest.skipIf(os.name == "nt", "symlink creation may require Windows developer privileges")
+    def test_layout_migration_rejects_nested_repository_asset_symlink(self) -> None:
+        temporary, root = self.make_root()
+        try:
+            project = self.make_legacy_project(root)
+            assets = project / "assets"
+            assets.mkdir()
+            outside = root / "outside.bin"
+            outside.write_bytes(b"outside")
+            (assets / "linked.bin").symlink_to(outside)
+
+            with self.assertRaisesRegex(
+                layout_migration.LayoutMigrationError,
+                "project tree contains a symlink",
+            ):
+                layout_migration.plan_project(project)
         finally:
             temporary.cleanup()
 
