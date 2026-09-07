@@ -441,7 +441,10 @@ async function loadProjects() {
 
     const requestedProject = new URL(window.location.href).searchParams.get("project");
     if (requestedProject) {
-      selectProject(requestedProject, { updateUrl: false });
+      selectProject(requestedProject, {
+        updateUrl: false,
+        scrollIntoView: window.matchMedia("(max-width: 991.98px)").matches,
+      });
     }
   } catch (error) {
     console.error("Project index load failed:", error);
@@ -473,7 +476,10 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("popstate", () => {
     const requestedProject = new URL(window.location.href).searchParams.get("project");
     if (requestedProject) {
-      selectProject(requestedProject, { updateUrl: false });
+      selectProject(requestedProject, {
+        updateUrl: false,
+        scrollIntoView: window.matchMedia("(max-width: 991.98px)").matches,
+      });
     } else {
       selectedProjectId = null;
       refreshSelectedStyles();
