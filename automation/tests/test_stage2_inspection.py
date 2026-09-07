@@ -7,6 +7,7 @@ import sys
 import tempfile
 import unittest
 import urllib.parse
+from datetime import datetime, timezone
 from pathlib import Path
 from types import ModuleType
 
@@ -227,7 +228,8 @@ class Stage2PlanningTests(unittest.TestCase):
                     {"versionNumber": 9}, {"versionNumber": 2},
                 ]},
             )
-            plan = planner.build_plan(root, "secret-token", api=api)
+            now = datetime(2026, 9, 7, 0, 0, tzinfo=timezone.utc)
+            plan = planner.build_plan(root, "secret-token", api=api, now=now)
             item = plan["projects"][0]
             self.assertEqual("canonical-id", item["scriptId"])
             self.assertEqual(["Alpha", "Zed"], [f["name"] for f in item["observation"]["files"]])
@@ -235,7 +237,10 @@ class Stage2PlanningTests(unittest.TestCase):
             serialized = json.dumps(plan, sort_keys=True)
             self.assertNotIn("secret-token", serialized)
             self.assertNotIn("wrong-id", serialized)
-            self.assertEqual(plan, planner.build_plan(root, "secret-token", api=api))
+            self.assertEqual(
+                plan,
+                planner.build_plan(root, "secret-token", api=api, now=now),
+            )
 
     def test_case_insensitive_remote_filename_conflict_fails_before_materialization(self):
         with tempfile.TemporaryDirectory() as temporary:
