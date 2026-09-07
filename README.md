@@ -47,6 +47,8 @@ Workflow: `.github/workflows/stage-2-3-sync.yml`
 - **Validation:** repository structural validation runs after Stage 3 and before any commit.
 - **Publication:** only `projects/` changes produced by a successful Stage 3 run are committed by this workflow.
 
+Stage 2 plans distinguish an observation family that was refreshed from one that was deliberately not observed. For `files`, `deployments`, and `versions`, `observationState` records `observed` or `not-observed`. Stage 3 replaces canonical metadata only for `observed` families; a `not-observed` family is preserved exactly from current canonical metadata and must not carry a stale payload in the plan. Source materialization additionally requires an observed `files` family. The recurring Stage 2 implementation currently still observes all three families; the explicit state exists so later request-reduction changes cannot confuse “not fetched” with “observed empty”.
+
 The shared Stage 2 Apps Script API client retries transient HTTP `429`, `500`, `502`, `503`, and `504` responses with a finite attempt budget. A valid `Retry-After` header is honored within the configured delay bound; otherwise the client uses bounded exponential backoff with jitter. Retry exhaustion remains fatal, so Stage 2 still fails closed without producing a successful plan or allowing Stage 3/commit to proceed.
 
 `clasp pull` is the only steady-state clasp command. Node.js and clasp are installed only when the Stage 2 plan reports that source materialization is required. Stage 3 still runs when zero pulls are required because unchanged active projects may need their structured Apps Script observations finalized.

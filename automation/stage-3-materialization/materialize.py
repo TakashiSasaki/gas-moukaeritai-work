@@ -56,6 +56,8 @@ class PostPullValidationError(RuntimeError):
 
 
 _EXTENSION_BY_TYPE = {"SERVER_JS": ".js", "HTML": ".html", "JSON": ".json"}
+_OBSERVATION_FAMILIES = ("files", "deployments", "versions")
+_OBSERVATION_STATES = {"observed", "not-observed"}
 
 
 def _optional_timestamp(value: Any, label: str, script_id: str) -> str | None:
@@ -106,6 +108,41 @@ def _validate_object_list(value: Any, label: str, script_id: str) -> list[dict[s
     if not isinstance(value, list) or any(not isinstance(item, dict) for item in value):
         raise MaterializationPlanError(f"{script_id}: Stage 2 observation {label} must be an object list")
     return value
+
+
+def _observation_states(
+    observation: dict[str, Any],
+    script_id: str,
+    *,
+    require_explicit: bool = False,
+) -> dict[str, str]:
+    """Return family freshness, requiring explicit state for schema-v2 plans."""
+    raw = observation.get("observationState")
+    if raw is None:
+        if require_explicit:
+            raise MaterializationPlanError(
+                f"{script_id}: schema-v2 observation must declare observationState"
+            )
+        return {family: "observed" for family in _OBSERVATION_FAMILIES}
+    if not isinstance(raw, dict):
+        raise MaterializationPlanError(
+            f"{script_id}: observation.observationState must be an object"
+        )
+    if set(raw) != set(_OBSERVATION_FAMILIES):
+        raise MaterializationPlanError(
+            f"{script_id}: observation.observationState must declare exactly "
+            f"{', '.join(_OBSERVATION_FAMILIES)}"
+        )
+    states: dict[str, str] = {}
+    for family in _OBSERVATION_FAMILIES:
+        state = raw.get(family)
+        if state not in _OBSERVATION_STATES:
+            raise MaterializationPlanError(
+                f"{script_id}: observation.observationState.{family} must be "
+                "'observed' or 'not-observed'"
+            )
+        states[family] = str(state)
+    return states
 
 
 def _source_relative_path(file_metadata: dict[str, Any], script_id: str) -> PurePosixPath:
@@ -291,7 +328,12 @@ def _expected_materialization_required(
     return checkpoint != observed_update_time
 
 
-def _validate_observation(item: dict[str, Any], script_id: str) -> dict[str, Any] | None:
+def _validate_observation(
+    item: dict[str, Any],
+    script_id: str,
+    *,
+    require_explicit_state: bool = False,
+) -> dict[str, Any] | None:
     lifecycle = item.get("lifecycle")
     required = item["materialization"]["required"]
     observation = item.get("observation")
@@ -323,17 +365,37 @@ def _validate_observation(item: dict[str, Any], script_id: str) -> dict[str, Any
             f"{script_id}: observation Apps Script project belongs to {observed_script_id!r}"
         )
 
-    files = _validate_object_list(observation.get("files"), "files", script_id)
-    _validate_object_list(observation.get("deployments"), "deployments", script_id)
-    _validate_object_list(observation.get("versions"), "versions", script_id)
-    try:
-        validate_files(files, script_id)
-        for file_metadata in files:
-            _source_relative_path(file_metadata, script_id)
-    except (CaseInsensitiveNameConflict, PostPullValidationError) as exc:
+    states = _observation_states(
+        observation,
+        script_id,
+        require_explicit=require_explicit_state,
+    )
+    family_values: dict[str, list[dict[str, Any]]] = {}
+    for family in _OBSERVATION_FAMILIES:
+        if states[family] == "observed":
+            family_values[family] = _validate_object_list(
+                observation.get(family), family, script_id
+            )
+        elif family in observation:
+            raise MaterializationPlanError(
+                f"{script_id}: not-observed {family} must omit its observation payload"
+            )
+
+    if required and states["files"] != "observed":
         raise MaterializationPlanError(
-            f"{script_id}: unsafe Stage 2 file observation: {exc}"
-        ) from exc
+            f"{script_id}: required materialization needs an observed files family"
+        )
+
+    files = family_values.get("files")
+    if files is not None:
+        try:
+            validate_files(files, script_id)
+            for file_metadata in files:
+                _source_relative_path(file_metadata, script_id)
+        except (CaseInsensitiveNameConflict, PostPullValidationError) as exc:
+            raise MaterializationPlanError(
+                f"{script_id}: unsafe Stage 2 file observation: {exc}"
+            ) from exc
 
     materialization = item["materialization"]
     planned_observed = _optional_timestamp(
@@ -392,8 +454,9 @@ def _validate_canonical_project(project_dir: Path, base: Path, script_id: str) -
 
 
 def _plan_projects(plan: dict[str, Any], base: Path) -> list[dict[str, Any]]:
-    if plan.get("schemaVersion") != 1:
-        raise MaterializationPlanError("Stage 2 plan schemaVersion must be 1")
+    schema_version = plan.get("schemaVersion")
+    if schema_version not in {1, 2}:
+        raise MaterializationPlanError("Stage 2 plan schemaVersion must be 1 or 2")
     projects = plan.get("projects")
     if not isinstance(projects, list):
         raise MaterializationPlanError("Stage 2 plan projects must be a list")
@@ -461,7 +524,11 @@ def _plan_projects(plan: dict[str, Any], base: Path) -> list[dict[str, Any]]:
                 f"current repository checkpoint is {current_checkpoint!r}"
             )
 
-        observation = _validate_observation(item, script_id)
+        observation = _validate_observation(
+            item,
+            script_id,
+            require_explicit_state=schema_version == 2,
+        )
         if planned_lifecycle != "absent":
             planned_observed = _optional_timestamp(
                 materialization.get("observedAppsScriptUpdateTime"),
@@ -609,9 +676,10 @@ def _metadata_from_observation(
     result["syncState"] = sync_state
 
     result["appsScriptApi"] = dict(observation["appsScriptApi"])
-    result["files"] = [dict(value) for value in observation["files"]]
-    result["deployments"] = [dict(value) for value in observation["deployments"]]
-    result["versions"] = [dict(value) for value in observation["versions"]]
+    states = _observation_states(observation, script_id)
+    for family in _OBSERVATION_FAMILIES:
+        if states[family] == "observed":
+            result[family] = [dict(value) for value in observation[family]]
     if item["materialization"]["required"]:
         observed = _optional_timestamp(
             item["materialization"].get("observedAppsScriptUpdateTime"),

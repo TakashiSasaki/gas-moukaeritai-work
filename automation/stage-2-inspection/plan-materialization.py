@@ -157,6 +157,11 @@ def build_plan(
             "lifecycle": lifecycle,
             "observation": {
                 "appsScriptApi": remote_project,
+                "observationState": {
+                    "files": "observed",
+                    "deployments": "observed",
+                    "versions": "observed",
+                },
                 "files": files,
                 "deployments": deployments,
                 "versions": versions,
@@ -170,7 +175,7 @@ def build_plan(
         })
 
     return {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "materializationRequired": any(
             project["materialization"]["required"] for project in projects
         ),
