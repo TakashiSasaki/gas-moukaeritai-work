@@ -15,7 +15,7 @@ Drive Shallow Mover is a Google Apps Script Web App for searching, browsing, and
 - Move multiple selected files by updating their Drive parents.
 - Cache folder listings and statistics for 600 seconds in User Cache.
 - Save per-user search settings in User Properties.
-- Use user-level locks around mutating/settings operations to reduce concurrent-update conflicts.
+- Use user-level locks when creating folders and saving search settings. File moves do not acquire these locks.
 
 ## Implementation notes
 

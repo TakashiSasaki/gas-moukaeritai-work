@@ -6,7 +6,7 @@ Google Tasks Viewer is a Google Apps Script Web App for inspecting Google Tasks 
 
 ## Features
 
-- Lists all task lists available through the Advanced Google Tasks service.
+- Lists the first page of task lists returned by the Advanced Google Tasks service.
 - Detects the user's default task list.
 - Computes per-list counts for active, completed, and deleted tasks.
 - Shows oldest/newest update times and a preview of recent active task titles.
@@ -15,6 +15,10 @@ Google Tasks Viewer is a Google Apps Script Web App for inspecting Google Tasks 
 - Deletes selected tasks.
 - Deletes non-default task lists while explicitly protecting the default list.
 - Caches per-list statistics and the resolved default-list ID for 600 seconds.
+
+## Pagination limitation
+
+The current code does not follow next-page tokens. Statistics and task details use only the first page of up to 100 tasks per list, so counts, date ranges, and previews may be incomplete for larger lists.
 
 ## Move semantics
 
@@ -28,7 +32,7 @@ If deletion fails after insertion, the result reports the partial failure so the
 
 ## Web App
 
-`doGet(e)` normally serves the main application. `?page=readme` serves the built-in help page from the Apps Script project.
+`gas/Code.js` defines a `doGet(e)` handler that serves the main application or built-in help for `?page=readme`. A second handler in `gas/doGet.js` always serves the main application. Because both definitions are present, the materialized source does not establish a single unambiguous routing implementation.
 
 ## Requirements
 

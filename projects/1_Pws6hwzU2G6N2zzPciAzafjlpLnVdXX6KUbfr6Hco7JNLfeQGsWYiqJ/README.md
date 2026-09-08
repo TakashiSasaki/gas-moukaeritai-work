@@ -19,7 +19,7 @@ The spreadsheet ID is stored in User Properties under `DOC_LIST_SPREADSHEET_ID` 
 
 ## Reliability
 
-Drive listing uses pages of up to 500 files and retries transient Drive/API quota failures up to five times with exponential backoff plus jitter. Filtering is repeated after retrieval so `.txt` and `.md` matches are validated by their actual filename suffix.
+Drive listing uses pages of up to 500 files and handles transient Drive/API quota failures with up to five attempts in total with exponential backoff plus jitter. Filtering is repeated after retrieval so `.txt` and `.md` matches are validated by their actual filename suffix.
 
 ## Requirements
 
