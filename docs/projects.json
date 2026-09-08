@@ -4,7 +4,7 @@
     "name": " Apps Script デプロイメント マネージャ データ更新 キャッシュクリア & 再取得",
     "createdAt": "2025-11-08T15:34:09.174Z",
     "updatedAt": "2025-11-08T17:37:30.571Z",
-    "hasReadme": false
+    "hasReadme": true
   },
   {
     "id": "1XB8G6BUwfRJsR9KyHOaEX8F1D2k3hmP0tB5Zec6cKoXNwx4hA4turlAj",
@@ -39,7 +39,7 @@
     "name": "Apps Script project ID to observe",
     "createdAt": "2026-06-22T12:04:17.043Z",
     "updatedAt": "2026-09-07T03:38:52.658Z",
-    "hasReadme": false
+    "hasReadme": true
   },
   {
     "id": "1iSAbJgupNLOxKwff9-bHeJ1whiE8sZmCxy2eb5D7qDyl4nZE_LjrKpHA",
@@ -158,14 +158,14 @@
     "name": "Docs to Blogger Publisher",
     "createdAt": "2025-12-22T00:36:19.283Z",
     "updatedAt": "2025-12-22T01:33:24.416Z",
-    "hasReadme": false
+    "hasReadme": true
   },
   {
     "id": "1jdrz76e6DCQI4bmZAqlkRhM8uMjvycSr8MfNE1AFEpNk3IDjwyw4i0Rc",
     "name": "Docsタイトル提案アドイン",
     "createdAt": "2025-10-14T03:32:25.496Z",
     "updatedAt": "2025-12-16T07:48:20.808Z",
-    "hasReadme": false
+    "hasReadme": true
   },
   {
     "id": "11rpH01pllhsLXw8piWIWlI06yc_BrfqQ4sAP9jxRMgbq1mXrg3mHVmzQ",
@@ -186,7 +186,7 @@
     "name": "Drive Shallow Mover",
     "createdAt": "2026-01-28T10:48:09.574Z",
     "updatedAt": "2026-01-31T03:18:46.776Z",
-    "hasReadme": false
+    "hasReadme": true
   },
   {
     "id": "18fkObcqcU91kBSTc0UHqI3vOyd1zxSX6CHvJxaE1Urn6T-dS9d_lLiKj",
@@ -207,7 +207,7 @@
     "name": "Ehime Matsuyama Museum Street",
     "createdAt": "2026-03-16T02:40:09.248Z",
     "updatedAt": "2026-03-26T05:16:16.955Z",
-    "hasReadme": false
+    "hasReadme": true
   },
   {
     "id": "1DJbk8E57h7UVVXyzS9PIDn_iL0ZJf39VRdLepQbf_DDI9WPVkzVlSN2Z",
@@ -354,14 +354,14 @@
     "name": "Google Tasks Viewer",
     "createdAt": "2025-12-22T03:48:48.748Z",
     "updatedAt": "2025-12-22T06:16:24.151Z",
-    "hasReadme": false
+    "hasReadme": true
   },
   {
     "id": "1_Pws6hwzU2G6N2zzPciAzafjlpLnVdXX6KUbfr6Hco7JNLfeQGsWYiqJ",
     "name": "Googleドライブ内文書一覧",
     "createdAt": "2025-11-08T01:33:09.425Z",
     "updatedAt": "2025-11-08T02:52:34.749Z",
-    "hasReadme": false
+    "hasReadme": true
   },
   {
     "id": "1AavEYmp44tHxyqTvV8kBTHM26zOaUdsVDjr6KMnKojbV5kPwr2EJ6LLi",
@@ -487,7 +487,7 @@
     "name": "Markdown converter",
     "createdAt": "2025-11-05T02:56:44.420Z",
     "updatedAt": "2025-11-05T04:00:43.297Z",
-    "hasReadme": false
+    "hasReadme": true
   },
   {
     "id": "155SE7dCPH52t6l_we4avFQGhawNVjChOTiMdRC8UYuniDb_UWwW-yIx8",
@@ -599,14 +599,14 @@
     "name": "read-only-datastore-admin",
     "createdAt": "2025-08-26T00:05:04.904Z",
     "updatedAt": "2025-08-26T00:16:00.875Z",
-    "hasReadme": false
+    "hasReadme": true
   },
   {
     "id": "1eemaTl1sGS9LyDLY4MyflHQdcEDwMp-JNXz6bABf1cY-CPcc4wKocROt",
     "name": "rename-by-gemini",
     "createdAt": "2025-08-03T23:29:22.016Z",
     "updatedAt": "2025-08-04T03:32:23.173Z",
-    "hasReadme": false
+    "hasReadme": true
   },
   {
     "id": "1N94EvQQ3JB0od091wek3iOQ5bHxKxDZiHfW1fhsuLLKbPlo7uyVicKxE",
@@ -788,7 +788,7 @@
     "name": "Web Clip Stash",
     "createdAt": "2025-12-16T00:00:17.137Z",
     "updatedAt": "2025-12-16T02:18:16.020Z",
-    "hasReadme": false
+    "hasReadme": true
   },
   {
     "id": "1DODUgAitkJ2cD9jdo-xbYfMbJQIM_LwQioFIWxu8TBYj-d1GJc_JsLYe",
@@ -823,7 +823,7 @@
     "name": "タイトル文字列の適切さ判定",
     "createdAt": "2025-11-08T03:54:41.840Z",
     "updatedAt": "2025-11-08T07:43:12.781Z",
-    "hasReadme": false
+    "hasReadme": true
   },
   {
     "id": "1tEJHwlwUnrmb4488tbOkvhlBBfrAVHflvXT2WqXp_z8GGNgIi-Mv5VQ6",
