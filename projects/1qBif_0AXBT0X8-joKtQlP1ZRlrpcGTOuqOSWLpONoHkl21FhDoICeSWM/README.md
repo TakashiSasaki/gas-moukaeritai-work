@@ -12,8 +12,10 @@ The current configuration:
 - ignores trashed files;
 - considers Google Docs, PDFs, and plain-text files;
 - excludes files updated within the last **7 days** as a safety window;
-- limits scanning and returned candidates;
+- limits accepted candidates and returned results, but does not bound the total number of inspected files;
 - only processes files owned by the active user.
+
+Files rejected by ownership or age checks do not increment the candidate counter. A large Drive root may therefore require traversing the entire matching iterator and can exceed the Apps Script execution limit.
 
 ## KEEP/MOVE classification
 

@@ -25,8 +25,10 @@ The current code does not follow next-page tokens. Statistics and task details u
 The current implementation does not use an atomic server-side "move" operation. For each selected task it:
 
 1. Reads the original task.
-2. Inserts a copy in the destination list.
+2. Inserts a new task in the destination list containing only the original title and, when present, notes, due date, and status.
 3. Deletes the original task after the insertion succeeds.
+
+This is a lossy transfer: the original task ID, hierarchy/parent relationship, position, links, completion timestamp, and other metadata are not copied. Subtasks are not traversed or recreated with their parent, so moving a parent does not preserve its task tree.
 
 If deletion fails after insertion, the result reports the partial failure so the user can detect the duplicate/copy state.
 
